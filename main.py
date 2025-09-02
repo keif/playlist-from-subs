@@ -8,6 +8,7 @@ Perfect for running as a cron job to keep your playlists updated.
 """
 
 import argparse
+import csv
 import logging
 import os
 import sys
@@ -135,7 +136,7 @@ def add_videos_to_playlist(
     videos: List[Dict[str, Any]],
     cache: VideoCache,
     dry_run: bool = False,
-) -> Dict[str, bool]:
+) -> List[Dict[str, Any]]:
     """
     Add filtered videos to the playlist and update cache.
 
@@ -147,11 +148,11 @@ def add_videos_to_playlist(
         dry_run: If True, don't actually add videos
 
     Returns:
-        Dict mapping video_id to success status
+        List of video metadata dicts with 'added' field indicating success
     """
     if not videos:
         logger.info("No videos to add to playlist")
-        return {}
+        return []
 
     if dry_run:
         logger.info(
@@ -159,24 +160,66 @@ def add_videos_to_playlist(
         )
         for video in videos:
             logger.info(f"  - {video['title']} ({video['video_id']})")
-        return {video["video_id"]: True for video in videos}
+        # Return videos with added=True for dry run
+        return [dict(video, added=True) for video in videos]
 
     # Add videos to playlist
     video_ids = [video["video_id"] for video in videos]
     results = api.add_videos_to_playlist(playlist_id, video_ids)
 
-    # Update cache for successful additions
+    # Create detailed results with metadata
+    detailed_results = []
     for video in videos:
         video_id = video["video_id"]
-        if results.get(video_id, False):
+        added = results.get(video_id, False)
+        
+        # Update cache for successful additions
+        if added:
             cache.mark_processed(
                 video_id, title=video["title"], channel=video["channel_title"]
             )
             logger.info(f"✅ Added: {video['title']}")
         else:
             logger.warning(f"❌ Failed to add: {video['title']}")
+        
+        # Add the 'added' field to the video metadata
+        video_result = dict(video, added=added)
+        detailed_results.append(video_result)
 
-    return results
+    return detailed_results
+
+
+def write_report(video_results: List[Dict[str, Any]], report_path: str) -> None:
+    """
+    Write video metadata to a CSV report file.
+    
+    Args:
+        video_results: List of video metadata dicts with 'added' field
+        report_path: Path to write the CSV file
+    """
+    if not video_results:
+        logger.info("No videos to report")
+        return
+        
+    try:
+        with open(report_path, 'w', newline='', encoding='utf-8') as csvfile:
+            fieldnames = [
+                'title', 'video_id', 'channel_title', 'channel_id', 
+                'published_at', 'duration_seconds', 'live_broadcast', 'added'
+            ]
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            
+            writer.writeheader()
+            for video in video_results:
+                # Only write the fields we want in the CSV
+                row = {field: video.get(field, '') for field in fieldnames}
+                writer.writerow(row)
+        
+        added_count = sum(1 for v in video_results if v.get('added', False))
+        logger.info(f"Report written to {report_path} ({added_count}/{len(video_results)} videos added)")
+        
+    except Exception as e:
+        logger.warning(f"Failed to write report to {report_path}: {e}")
 
 
 def main():
@@ -190,6 +233,7 @@ Examples:
   python main.py --dry-run          # See what would be added without changes
   python main.py --verbose          # Enable debug logging
   python main.py --limit 10         # Fetch max 10 recent videos
+  python main.py --report output.csv # Generate CSV report of added videos
         """,
     )
 
@@ -207,6 +251,12 @@ Examples:
         "--limit",
         type=int,
         help="Maximum number of recent videos to fetch (overrides MAX_VIDEOS_TO_FETCH)",
+    )
+
+    parser.add_argument(
+        "--report",
+        type=str,
+        help="Generate a CSV report of added videos at the specified path",
     )
 
     args = parser.parse_args()
@@ -274,7 +324,7 @@ Examples:
             sys.exit(0)
 
         # Add videos to playlist
-        results = add_videos_to_playlist(
+        video_results = add_videos_to_playlist(
             api=api,
             playlist_id=playlist_id,
             videos=filtered_videos,
@@ -282,9 +332,13 @@ Examples:
             dry_run=args.dry_run,
         )
 
+        # Generate report if requested
+        if args.report:
+            write_report(video_results, args.report)
+
         # Summary
-        successful = sum(results.values())
-        total = len(results)
+        successful = sum(1 for v in video_results if v.get('added', False))
+        total = len(video_results)
 
         if args.dry_run:
             logger.info(f"DRY RUN complete: {total} videos would be added")
