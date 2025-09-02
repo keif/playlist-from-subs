@@ -11,12 +11,13 @@ Automatically sync your latest YouTube subscription uploads into a custom playli
 - Pulls uploads from your subscribed channels
 - Adds them to a target playlist (new or existing)
 - Filters out:
-  - Shorts or very short videos (e.g. under 60s)
-  - Livestreams (optional)
-  - Member-only videos (optional, via metadata filtering)
+  - Shorts or very short videos (configurable minimum duration)
+  - Livestreams and premieres (enabled by default, configurable)
+  - Videos from non-whitelisted channels (optional)
 - Configurable daily cron job
 - OAuth2 token flow for secure access
 - Logging and dry-run support
+- CSV reporting of processed videos
 
 ---
 
@@ -65,13 +66,48 @@ This will open a browser window to authorize your Google account and store `toke
 ---
 
 ## Usage
+
+### Basic Usage
 ```bash
+# Normal run - adds new videos to playlist
 python main.py
+
+# Dry-run mode (shows what would be added without making changes)
+python main.py --dry-run
+
+# Verbose logging for debugging
+python main.py --verbose
+
+# Limit number of videos to process
+python main.py --limit 20
 ```
 
-For dry-run mode (no actual playlist modification):
+### CSV Reporting
+Generate a CSV report of all processed videos:
 ```bash
-python main.py --dry-run
+# Generate report with video metadata
+python main.py --report videos_added.csv
+
+# Combine with dry-run to see what would be processed
+python main.py --dry-run --report preview.csv
+```
+
+The CSV report includes: title, video_id, channel_title, channel_id, published_at, duration_seconds, live_broadcast, added
+
+### Environment Configuration
+Key settings in `.env`:
+```bash
+# Skip livestreams and premieres (default: true)
+SKIP_LIVE_CONTENT=true
+
+# Minimum video duration in seconds
+VIDEO_MIN_DURATION_SECONDS=120
+
+# Hours to look back for new videos
+LOOKBACK_HOURS=24
+
+# Channel whitelist (comma-separated IDs, optional)
+CHANNEL_ID_WHITELIST=UC1234567890,UC0987654321
 ```
 
 ---
@@ -104,7 +140,7 @@ Or use APScheduler inside Python to run periodically.
 ---
 
 ## TODO
--	Add livestream/member-only skip logic
 -	Add GUI or web dashboard (optional)
 -	Option to remove old videos from playlist
 -	Telegram or email alert for failures
+-	JSON report format option
