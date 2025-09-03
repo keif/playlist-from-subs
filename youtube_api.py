@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import Any, Dict, List, Optional
 
 from googleapiclient.errors import HttpError
@@ -97,6 +98,161 @@ class YouTubeAPI:
             return []
         except Exception as e:
             logger.error(f"Unexpected error fetching subscription activity: {e}")
+            return []
+
+    def get_recent_uploads_from_subscriptions(
+        self, published_after: str, max_per_channel: int = 5
+    ) -> List[Dict[str, Any]]:
+        """
+        Get recent videos from subscribed channels by fetching subscriptions
+        and then searching each channel individually. More reliable than activities API.
+
+        Args:
+            published_after: RFC 3339 timestamp for filtering recent videos
+            max_per_channel: Maximum number of videos to fetch per channel
+
+        Returns:
+            List of video data dictionaries with keys: video_id, title, channel_id,
+            channel_title, published_at, duration_seconds, live_broadcast
+        """
+        videos = []
+
+        try:
+            # Get all subscriptions
+            subscriptions = self._get_all_subscriptions()
+            if not subscriptions:
+                logger.warning("No subscriptions found")
+                return videos
+
+            logger.info(f"Found {len(subscriptions)} subscribed channels")
+
+            # Process each subscribed channel
+            total_channels = len(subscriptions)
+            for i, subscription in enumerate(subscriptions, 1):
+                channel_id = subscription["snippet"]["resourceId"]["channelId"]
+                channel_title = subscription["snippet"]["title"]
+
+                # Log progress every 10 channels
+                if i % 10 == 0 or i == total_channels:
+                    logger.info(f"Processing channel {i}/{total_channels}: {channel_title}")
+
+                # Get recent uploads for this channel
+                channel_videos = self._get_channel_recent_uploads(
+                    channel_id, channel_title, published_after, max_per_channel
+                )
+                videos.extend(channel_videos)
+
+                # Add small delay to avoid quota spikes
+                time.sleep(0.25)
+
+            logger.info(f"Found {len(videos)} total recent videos from {total_channels} channels")
+            return videos
+
+        except HttpError as e:
+            logger.error(f"YouTube API error fetching subscription uploads: {e}")
+            return []
+        except Exception as e:
+            logger.error(f"Unexpected error fetching subscription uploads: {e}")
+            return []
+
+    def _get_all_subscriptions(self) -> List[Dict[str, Any]]:
+        """
+        Fetch all user subscriptions using pagination.
+
+        Returns:
+            List of subscription data dictionaries
+        """
+        subscriptions = []
+        next_page_token = None
+
+        try:
+            while True:
+                request = self.service.subscriptions().list(
+                    part="snippet",
+                    mine=True,
+                    maxResults=50,
+                    pageToken=next_page_token
+                )
+
+                response = request.execute()
+                items = response.get("items", [])
+                subscriptions.extend(items)
+
+                next_page_token = response.get("nextPageToken")
+                if not next_page_token:
+                    break
+
+            return subscriptions
+
+        except HttpError as e:
+            logger.error(f"YouTube API error fetching subscriptions: {e}")
+            return []
+
+    def _get_channel_recent_uploads(
+        self, channel_id: str, channel_title: str, published_after: str, max_results: int
+    ) -> List[Dict[str, Any]]:
+        """
+        Get recent upload videos from a specific channel.
+
+        Args:
+            channel_id: YouTube channel ID
+            channel_title: Channel display name (for logging)
+            published_after: RFC 3339 timestamp for filtering
+            max_results: Maximum number of videos to fetch
+
+        Returns:
+            List of video data dictionaries
+        """
+        videos = []
+
+        try:
+            # Search for recent videos from this channel
+            request = self.service.search().list(
+                part="snippet",
+                channelId=channel_id,
+                type="video",
+                order="date",
+                publishedAfter=published_after,
+                maxResults=min(max_results, 50)
+            )
+
+            response = request.execute()
+            items = response.get("items", [])
+
+            if not items:
+                logger.debug(f"No recent videos found for {channel_title}")
+                return videos
+
+            # Extract video IDs and get detailed information
+            video_ids = [item["id"]["videoId"] for item in items]
+            video_details = self._get_videos_details(video_ids)
+
+            # Combine search results with video details
+            for item in items:
+                video_id = item["id"]["videoId"]
+                snippet = item["snippet"]
+                
+                # Get details from videos API
+                details = video_details.get(video_id, {})
+                
+                video_data = {
+                    "video_id": video_id,
+                    "title": snippet["title"],
+                    "channel_id": channel_id,
+                    "channel_title": channel_title,
+                    "published_at": snippet["publishedAt"],
+                    "duration_seconds": parse_duration_to_seconds(
+                        details.get("duration", "")
+                    ),
+                    "live_broadcast": details.get("liveBroadcastContent", "none"),
+                }
+                videos.append(video_data)
+
+            logger.debug(f"Found {len(videos)} recent videos from {channel_title}")
+            return videos
+
+        except HttpError as e:
+            logger.warning(f"YouTube API error fetching videos for {channel_title}: {e}")
             return []
 
     def _get_videos_details(self, video_ids: List[str]) -> Dict[str, Dict[str, Any]]:
@@ -291,9 +447,9 @@ if __name__ == "__main__":
         api = YouTubeAPI()
 
         # Test fetching recent subscription activity
-        print("Testing subscription activity fetch...")
+        print("Testing new subscription uploads fetch...")
         published_after = get_published_after_timestamp(24)
-        videos = api.get_subscription_activity(published_after, max_results=5)
+        videos = api.get_recent_uploads_from_subscriptions(published_after, max_per_channel=3)
 
         print(f"Found {len(videos)} recent videos:")
         for video in videos[:3]:  # Show first 3

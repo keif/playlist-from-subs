@@ -303,8 +303,8 @@ Examples:
         published_after = get_published_after_timestamp(config["lookback_hours"])
         logger.info(f"Fetching videos published after {published_after}")
 
-        videos = api.get_subscription_activity(
-            published_after=published_after, max_results=config["max_videos"]
+        videos = api.get_recent_uploads_from_subscriptions(
+            published_after=published_after, max_per_channel=5
         )
 
         if not videos:
