@@ -18,6 +18,7 @@ class YouTubeAPI:
 
     def __init__(self):
         self.service = get_authenticated_service()
+        self.quota_exceeded = False  # Track quota status
 
     def get_subscription_activity(
         self, published_after: str, max_results: int = 50
@@ -149,7 +150,12 @@ class YouTubeAPI:
             return videos
 
         except HttpError as e:
-            logger.error(f"YouTube API error fetching subscription uploads: {e}")
+            if e.resp.status == 403 and "quotaExceeded" in str(e):
+                self.quota_exceeded = True
+                logger.error("YouTube API quota exceeded. Try again after 12AM Pacific Time.")
+                logger.error("Consider reducing max_per_channel or running less frequently.")
+            else:
+                logger.error(f"YouTube API error fetching subscription uploads: {e}")
             return []
         except Exception as e:
             logger.error(f"Unexpected error fetching subscription uploads: {e}")
@@ -185,7 +191,11 @@ class YouTubeAPI:
             return subscriptions
 
         except HttpError as e:
-            logger.error(f"YouTube API error fetching subscriptions: {e}")
+            if e.resp.status == 403 and "quotaExceeded" in str(e):
+                logger.error("YouTube API quota exceeded while fetching subscriptions.")
+                logger.error("Try again after 12AM Pacific Time.")
+            else:
+                logger.error(f"YouTube API error fetching subscriptions: {e}")
             return []
 
     def _get_channel_recent_uploads(
@@ -252,7 +262,11 @@ class YouTubeAPI:
             return videos
 
         except HttpError as e:
-            logger.warning(f"YouTube API error fetching videos for {channel_title}: {e}")
+            if e.resp.status == 403 and "quotaExceeded" in str(e):
+                logger.warning(f"YouTube API quota exceeded while fetching videos for {channel_title}.")
+                logger.warning("Stopping channel processing due to quota limits.")
+            else:
+                logger.warning(f"YouTube API error fetching videos for {channel_title}: {e}")
             return []
 
     def _get_videos_details(self, video_ids: List[str]) -> Dict[str, Dict[str, Any]]:
@@ -295,7 +309,11 @@ class YouTubeAPI:
             return details
 
         except HttpError as e:
-            logger.error(f"YouTube API error fetching video details: {e}")
+            if e.resp.status == 403 and "quotaExceeded" in str(e):
+                logger.error("YouTube API quota exceeded while fetching video details.")
+                logger.error("Try again after 12AM Pacific Time.")
+            else:
+                logger.error(f"YouTube API error fetching video details: {e}")
             return {}
         except Exception as e:
             logger.error(f"Unexpected error fetching video details: {e}")
@@ -386,7 +404,11 @@ class YouTubeAPI:
             return None
 
         except HttpError as e:
-            logger.warning(f"Error searching for playlist '{playlist_name}': {e}")
+            if e.resp.status == 403 and "quotaExceeded" in str(e):
+                logger.warning("YouTube API quota exceeded while searching for existing playlists.")
+                logger.warning("Will attempt to create new playlist instead.")
+            else:
+                logger.warning(f"Error searching for playlist '{playlist_name}': {e}")
             return None
 
     def _create_playlist(self, title: str, privacy_status: str) -> Optional[str]:
@@ -411,7 +433,11 @@ class YouTubeAPI:
             return playlist_id
 
         except HttpError as e:
-            logger.error(f"Failed to create playlist: {e}")
+            if e.resp.status == 403 and "quotaExceeded" in str(e):
+                logger.error("YouTube API quota exceeded while creating playlist.")
+                logger.error("Try again after 12AM Pacific Time.")
+            else:
+                logger.error(f"Failed to create playlist: {e}")
             return None
         except Exception as e:
             logger.error(f"Unexpected error creating playlist: {e}")
@@ -449,6 +475,11 @@ class YouTubeAPI:
             if e.resp.status == 409:
                 logger.debug(f"Video {video_id} already in playlist {playlist_id}")
                 return True  # Consider duplicates as success
+            elif e.resp.status == 403 and "quotaExceeded" in str(e):
+                self.quota_exceeded = True
+                logger.warning("YouTube API quota exceeded while adding videos to playlist.")
+                logger.warning("Try again after 12AM Pacific Time.")
+                return False
             else:
                 logger.warning(f"Failed to add video {video_id} to playlist: {e}")
                 return False
@@ -460,7 +491,7 @@ class YouTubeAPI:
         self, playlist_id: str, video_ids: List[str]
     ) -> Dict[str, bool]:
         """
-        Add multiple videos to a playlist.
+        Add multiple videos to a playlist with quota-aware early termination.
 
         Args:
             playlist_id: Target playlist ID
@@ -472,13 +503,24 @@ class YouTubeAPI:
         results = {}
 
         for video_id in video_ids:
+            # Stop processing if quota was exceeded
+            if self.quota_exceeded:
+                logger.warning(f"Skipping remaining videos due to quota exceeded")
+                break
+                
             success = self.add_video_to_playlist(playlist_id, video_id)
             results[video_id] = success
 
         successful = sum(results.values())
-        logger.info(
-            f"Successfully added {successful}/{len(video_ids)} videos to playlist"
-        )
+        if self.quota_exceeded and len(results) < len(video_ids):
+            logger.warning(
+                f"Quota exceeded: only processed {len(results)}/{len(video_ids)} videos, "
+                f"{successful} added successfully"
+            )
+        else:
+            logger.info(
+                f"Successfully added {successful}/{len(video_ids)} videos to playlist"
+            )
 
         return results
 
