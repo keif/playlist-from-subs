@@ -202,7 +202,8 @@ class YouTubeAPI:
         self, channel_id: str, channel_title: str, published_after: str, max_results: int
     ) -> List[Dict[str, Any]]:
         """
-        Get recent upload videos from a specific channel.
+        Get recent upload videos from a specific channel using the uploads playlist.
+        This is much more quota-efficient than search() API (1 unit vs 100 units).
 
         Args:
             channel_id: YouTube channel ID
@@ -216,31 +217,42 @@ class YouTubeAPI:
         videos = []
 
         try:
-            # Search for recent videos from this channel
-            request = self.service.search().list(
-                part="snippet",
-                channelId=channel_id,
-                type="video",
-                order="date",
-                publishedAfter=published_after,
-                maxResults=min(max_results, 50)
+            # QUOTA OPTIMIZATION: Replace expensive search().list() (100 units) 
+            # with channels().list() + playlistItems().list() (1 unit each)
+            
+            # Step 1: Get the channel's uploads playlist ID (1 quota unit)
+            uploads_playlist_id = self._get_channel_uploads_playlist_id(channel_id, channel_title)
+            if not uploads_playlist_id:
+                return videos
+
+            # Step 2: Fetch recent videos from uploads playlist (1 quota unit per 50 items)
+            playlist_items = self._get_playlist_recent_items(
+                uploads_playlist_id, channel_title, max_results
             )
 
-            response = request.execute()
-            items = response.get("items", [])
-
-            if not items:
+            if not playlist_items:
                 logger.debug(f"No recent videos found for {channel_title}")
                 return videos
 
-            # Extract video IDs and get detailed information
-            video_ids = [item["id"]["videoId"] for item in items]
+            # Step 3: Extract video IDs and get detailed information
+            video_ids = [item["contentDetails"]["videoId"] for item in playlist_items]
             video_details = self._get_videos_details(video_ids)
 
-            # Combine search results with video details
-            for item in items:
-                video_id = item["id"]["videoId"]
+            # Step 4: Filter by published date and combine with video details
+            from datetime import datetime
+            published_after_dt = datetime.fromisoformat(published_after.replace('Z', '+00:00'))
+
+            for item in playlist_items:
+                video_id = item["contentDetails"]["videoId"]
                 snippet = item["snippet"]
+                
+                # Filter by publish date (playlist items are ordered by upload date, 
+                # but we still need to filter by our specific timeframe)
+                published_at_str = snippet["publishedAt"]
+                published_at_dt = datetime.fromisoformat(published_at_str.replace('Z', '+00:00'))
+                
+                if published_at_dt < published_after_dt:
+                    continue  # Skip videos older than our lookback period
                 
                 # Get details from videos API
                 details = video_details.get(video_id, {})
@@ -250,7 +262,7 @@ class YouTubeAPI:
                     "title": snippet["title"],
                     "channel_id": channel_id,
                     "channel_title": channel_title,
-                    "published_at": snippet["publishedAt"],
+                    "published_at": published_at_str,
                     "duration_seconds": parse_duration_to_seconds(
                         details.get("duration", "")
                     ),
@@ -267,6 +279,84 @@ class YouTubeAPI:
                 logger.warning("Stopping channel processing due to quota limits.")
             else:
                 logger.warning(f"YouTube API error fetching videos for {channel_title}: {e}")
+            return []
+
+    def _get_channel_uploads_playlist_id(self, channel_id: str, channel_title: str) -> Optional[str]:
+        """
+        Get the uploads playlist ID for a channel. This is more quota-efficient 
+        than using search() API.
+
+        Args:
+            channel_id: YouTube channel ID
+            channel_title: Channel display name (for logging)
+
+        Returns:
+            Uploads playlist ID if found, None otherwise
+        """
+        try:
+            # Use channels().list() to get channel details (1 quota unit)
+            request = self.service.channels().list(
+                part="contentDetails",
+                id=channel_id
+            )
+
+            response = request.execute()
+            items = response.get("items", [])
+
+            if not items:
+                logger.debug(f"No channel details found for {channel_title}")
+                return None
+
+            # Extract uploads playlist ID
+            content_details = items[0].get("contentDetails", {})
+            uploads_playlist_id = content_details.get("relatedPlaylists", {}).get("uploads")
+
+            if not uploads_playlist_id:
+                logger.debug(f"No uploads playlist found for {channel_title}")
+                return None
+
+            logger.debug(f"Found uploads playlist {uploads_playlist_id} for {channel_title}")
+            return uploads_playlist_id
+
+        except HttpError as e:
+            if e.resp.status == 403 and "quotaExceeded" in str(e):
+                logger.warning(f"YouTube API quota exceeded while getting uploads playlist for {channel_title}.")
+            else:
+                logger.warning(f"YouTube API error getting uploads playlist for {channel_title}: {e}")
+            return None
+
+    def _get_playlist_recent_items(self, playlist_id: str, channel_title: str, max_results: int) -> List[Dict[str, Any]]:
+        """
+        Get recent items from a playlist (typically a channel's uploads playlist).
+        This is very quota-efficient (1 unit per 50 items).
+
+        Args:
+            playlist_id: YouTube playlist ID
+            channel_title: Channel display name (for logging)
+            max_results: Maximum number of items to fetch
+
+        Returns:
+            List of playlist item dictionaries
+        """
+        try:
+            # Use playlistItems().list() to get recent uploads (1 quota unit per 50 items)
+            request = self.service.playlistItems().list(
+                part="snippet,contentDetails",
+                playlistId=playlist_id,
+                maxResults=min(max_results, 50)  # API limit is 50
+            )
+
+            response = request.execute()
+            items = response.get("items", [])
+
+            logger.debug(f"Found {len(items)} playlist items for {channel_title}")
+            return items
+
+        except HttpError as e:
+            if e.resp.status == 403 and "quotaExceeded" in str(e):
+                logger.warning(f"YouTube API quota exceeded while fetching playlist items for {channel_title}.")
+            else:
+                logger.warning(f"YouTube API error fetching playlist items for {channel_title}: {e}")
             return []
 
     def _get_videos_details(self, video_ids: List[str]) -> Dict[str, Dict[str, Any]]:
