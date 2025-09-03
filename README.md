@@ -82,6 +82,22 @@ python main.py --verbose
 python main.py --limit 20
 ```
 
+### Helper Scripts
+
+To simplify running the tool, several helper scripts are provided in the project root:
+
+```bash
+./run.sh         # Live run using current .env config (e.g. 24h lookback)
+./dryrun.sh      # Dry-run mode – see what would be added without modifying the playlist
+./weekly.sh      # Pulls videos from the last 7 days (168-hour lookback)
+./reset-auth.sh  # Deletes existing token.json and initiates a new auth flow
+./env-debug.sh   # Prints the currently loaded configuration from .env
+```
+
+> Ensure all scripts are marked executable: `chmod +x *.sh`
+
+These scripts wrap common configurations and are useful for cron jobs or manual runs.
+
 ### CSV Reporting
 Generate a CSV report of all processed videos:
 ```bash
