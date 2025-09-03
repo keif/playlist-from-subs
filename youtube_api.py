@@ -326,7 +326,14 @@ class YouTubeAPI:
             else:
                 logger.warning(f"Playlist {playlist_id} not found or inaccessible")
 
-        # Create new playlist
+        # Check if playlist with this name already exists
+        existing_playlist = self._find_playlist_by_name(playlist_name)
+        if existing_playlist:
+            logger.info(f"Found existing playlist '{playlist_name}' with ID: {existing_playlist}")
+            return existing_playlist
+
+        # Create new playlist only if none exists with this name
+        logger.info(f"No existing playlist found with name '{playlist_name}', creating new one")
         return self._create_playlist(playlist_name, privacy_status)
 
     def _verify_playlist_exists(self, playlist_id: str) -> bool:
@@ -339,6 +346,48 @@ class YouTubeAPI:
         except HttpError as e:
             logger.debug(f"Error verifying playlist {playlist_id}: {e}")
             return False
+
+    def _find_playlist_by_name(self, playlist_name: str) -> Optional[str]:
+        """
+        Find existing playlist by name to avoid creating duplicates.
+
+        Args:
+            playlist_name: Name of playlist to search for
+
+        Returns:
+            Playlist ID if found, None otherwise
+        """
+        try:
+            next_page_token = None
+            
+            while True:
+                request = self.service.playlists().list(
+                    part="snippet",
+                    mine=True,
+                    maxResults=50,
+                    pageToken=next_page_token
+                )
+
+                response = request.execute()
+                items = response.get("items", [])
+
+                # Check each playlist for matching name
+                for playlist in items:
+                    if playlist["snippet"]["title"] == playlist_name:
+                        playlist_id = playlist["id"]
+                        logger.debug(f"Found existing playlist '{playlist_name}': {playlist_id}")
+                        return playlist_id
+
+                next_page_token = response.get("nextPageToken")
+                if not next_page_token:
+                    break
+
+            logger.debug(f"No existing playlist found with name '{playlist_name}'")
+            return None
+
+        except HttpError as e:
+            logger.warning(f"Error searching for playlist '{playlist_name}': {e}")
+            return None
 
     def _create_playlist(self, title: str, privacy_status: str) -> Optional[str]:
         """Create a new playlist."""
