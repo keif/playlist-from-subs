@@ -93,7 +93,9 @@ yt_sub_playlist/
 ├── scripts/
 │   ├── run.sh               # Production runner script
 │   ├── dryrun.sh            # Dry-run testing script
-│   └── reset-auth.sh        # Authentication reset utility
+│   ├── reset-auth.sh        # Authentication reset utility
+│   ├── quota_test.sh        # Quota usage simulator runner
+│   └── quota_simulator.py   # Quota estimation utility
 └── reports/
     └── videos_added.csv     # Generated reports
 ```
@@ -144,6 +146,9 @@ Convenient shell scripts are provided for common operations:
 
 # Reset authentication tokens
 ./yt_sub_playlist/scripts/reset-auth.sh
+
+# Run quota usage simulator
+./yt_sub_playlist/scripts/quota_test.sh
 ```
 
 > All scripts are automatically made executable during setup.
