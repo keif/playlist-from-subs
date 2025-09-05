@@ -209,3 +209,6 @@ __marimo__/
 # secrets
 client_secrets.json
 token.json
+
+# generated files
+processed_videos.json
