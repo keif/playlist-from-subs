@@ -93,7 +93,7 @@ yt_sub_playlist/
 ├── data/
 │   ├── processed_videos.json # Cache of processed video IDs
 │   ├── playlist_cache/       # Cached playlist contents
-│   ├── api_call_log.json     # Real-time API usage tracking
+│   ├── api_call_log.json     # (Ignored) Real-time API usage tracking; not committed
 │   └── logs/                 # Application logs
 ├── scripts/
 │   ├── run.sh               # Production runner script
@@ -188,7 +188,7 @@ VIDEO_MIN_DURATION_SECONDS=120               # Skip videos shorter than 2 minute
 SKIP_LIVE_CONTENT=true                       # Skip livestreams and premieres
 CHANNEL_ID_WHITELIST=UC1234,UC5678          # Optional: only include these channels
 
-# Fetching behavior  
+# Fetching behavior
 LOOKBACK_HOURS=24                            # How far back to look for videos
 MAX_VIDEOS_TO_FETCH=50                       # Maximum videos to process per run
 ```
@@ -213,7 +213,7 @@ crontab -e
 
 For more complex scheduling needs, consider using:
 - **systemd timers** (Linux)
-- **Task Scheduler** (Windows)  
+- **Task Scheduler** (Windows)
 - **APScheduler** (Python-based)
 - **GitHub Actions** (cloud-based)
 
@@ -231,7 +231,7 @@ This tool is designed to minimize YouTube API quota usage with intelligent monit
 
 ### Automated Quota Tracking
 - **Real-time API monitoring** - Every API call is automatically tracked
-- **Dynamic quota analysis** - Live usage data replaces static estimates  
+- **Dynamic quota analysis** - Live usage data replaces static estimates
 - **Centralized cost management** - All quota costs stored in `config/youtube_quota_costs.json`
 - **Intelligent reporting** - Detailed per-method breakdown with call counts and costs
 
@@ -264,7 +264,7 @@ python yt_sub_playlist/scripts/quota_simulator.py
 
 **Typical quota usage**:
 - Before optimization: ~8,000 units per run
-- After optimization: ~500-1,000 units per run  
+- After optimization: ~500-1,000 units per run
 - **~85-90% quota reduction**
 
 ---
@@ -318,6 +318,15 @@ Every API call is automatically tracked without manual intervention:
 4. **Optimize based on data** - Focus on high-cost operations
 
 ---
+
+## Ignored Files and Folders
+
+The following files are automatically generated at runtime and excluded from version control:
+
+- `data/playlist_cache/*.json` — Cached playlist contents (used to prevent reprocessing and reduce API quota usage)
+- `data/api_call_log.json` — Real-time API usage tracking used by the quota simulator
+
+> These are listed in `.gitignore` to ensure they are not committed.
 
 ## Troubleshooting
 
