@@ -14,6 +14,11 @@ PROJECT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
 # Change to project directory
 cd "$PROJECT_DIR"
 
+# Activate virtual environment if it exists
+if [ -d "venv" ]; then
+    source venv/bin/activate
+fi
+
 echo "Resetting YouTube API authentication..."
 
 # Remove stored token file

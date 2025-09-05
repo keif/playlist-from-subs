@@ -14,6 +14,11 @@ PROJECT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
 # Change to project directory
 cd "$PROJECT_DIR"
 
+# Activate virtual environment if it exists
+if [ -d "venv" ]; then
+    source venv/bin/activate
+fi
+
 # Set up logging
 LOG_DIR="yt_sub_playlist/data/logs"
 mkdir -p "$LOG_DIR"
