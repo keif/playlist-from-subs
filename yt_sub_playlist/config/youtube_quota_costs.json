@@ -1,0 +1,19 @@
+{
+  "channels.list": 1,
+  "playlistItems.insert": 50,
+  "playlistItems.list": 1,
+  "playlists.list": 1,
+  "subscriptions.list": 1,
+  "videos.list": 1,
+  "search.list": 100,
+  "playlists.insert": 50,
+  "playlists.update": 50,
+  "playlistItems.delete": 50,
+  "playlistItems.update": 50,
+  "channels.update": 50,
+  "videos.insert": 1600,
+  "videos.update": 50,
+  "activities.list": 1,
+  "commentThreads.list": 1,
+  "comments.list": 1
+}

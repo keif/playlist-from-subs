@@ -1,14 +1,12 @@
 # quota_simulator.py
 
-QUOTA_COSTS = {
-    "channels.list": 1,
-    "playlistItems.insert": 50,
-    "playlistItems.list": 1,
-    "playlists.list": 1,
-    "subscriptions.list": 1,
-    "videos.list": 1,
-    "search.list": 100,
-}
+import sys
+import os
+
+# Add parent directory to path to enable relative imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+from config.quota_costs import get_quota_cost
 
 # Simulate usage — replace these numbers with your actual or expected call counts
 api_calls = {
@@ -28,7 +26,8 @@ def calculate_quota_usage(api_calls):
     usage = {}
     total = 0
     for method, count in api_calls.items():
-        cost = QUOTA_COSTS[method] * count
+        unit_cost = get_quota_cost(method)
+        cost = unit_cost * count
         usage[method] = cost
         total += cost
     return usage, total
@@ -36,9 +35,11 @@ def calculate_quota_usage(api_calls):
 
 def suggest_reductions(usage):
     suggestions = []
+    
+    insert_cost = get_quota_cost("playlistItems.insert")
     if usage.get("playlistItems.insert", 0) > 5000:
         suggestions.append(
-            "🔻 Reduce `playlistItems.insert` calls (50 units each) by:\n"
+            f"🔻 Reduce `playlistItems.insert` calls ({insert_cost} units each) by:\n"
             "   – Filtering out already-added videos\n"
             "   – Consolidating inserts per session"
         )

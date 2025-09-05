@@ -9,6 +9,8 @@ import logging
 from typing import Dict, List, Optional
 from datetime import datetime, timezone
 
+from ..config.quota_costs import get_quota_cost
+
 logger = logging.getLogger(__name__)
 
 
@@ -20,29 +22,6 @@ class QuotaTracker:
     The YouTube Data API v3 has a default quota of 10,000 units per day.
     """
     
-    # Standard quota costs for different API methods
-    QUOTA_COSTS = {
-        # Reading operations (1 unit each)
-        'channels.list': 1,
-        'playlists.list': 1,
-        'playlistItems.list': 1,
-        'subscriptions.list': 1,
-        'videos.list': 1,
-        'activities.list': 1,
-        
-        # Writing operations (higher costs)
-        'playlists.insert': 50,
-        'playlistItems.insert': 50,
-        'playlists.update': 50,
-        'playlistItems.update': 50,
-        'playlists.delete': 50,
-        'playlistItems.delete': 50,
-        
-        # Expensive operations
-        'search.list': 100,  # Very expensive - avoided in our implementation
-        'commentThreads.list': 1,
-        'comments.list': 1,
-    }
     
     def __init__(self):
         """Initialize quota tracker."""
@@ -64,7 +43,7 @@ class QuotaTracker:
             count: Number of times this method was called (default: 1)
             items_processed: Number of items processed in the call (for batching info)
         """
-        cost_per_call = self.QUOTA_COSTS.get(method, 1)
+        cost_per_call = get_quota_cost(method)
         total_cost = cost_per_call * count
         
         call_record = {
@@ -135,21 +114,21 @@ class QuotaTracker:
             # videos.list is batched up to 50 items per call
             batch_size = 50
             batches_needed = (item_count + batch_size - 1) // batch_size
-            return batches_needed * self.QUOTA_COSTS['videos.list']
+            return batches_needed * get_quota_cost('videos.list')
         
         elif operation == 'add_to_playlist':
             # Each playlist insertion costs 50 units
-            return item_count * self.QUOTA_COSTS['playlistItems.insert']
+            return item_count * get_quota_cost('playlistItems.insert')
         
         elif operation == 'fetch_subscriptions':
             # subscriptions.list, typically needs 1-2 calls for most users
-            return 2 * self.QUOTA_COSTS['subscriptions.list']
+            return 2 * get_quota_cost('subscriptions.list')
         
         elif operation == 'fetch_playlist_items':
             # playlistItems.list, batched up to 50 items per call
             batch_size = 50
             batches_needed = (item_count + batch_size - 1) // batch_size
-            return batches_needed * self.QUOTA_COSTS['playlistItems.list']
+            return batches_needed * get_quota_cost('playlistItems.list')
         
         else:
             logger.warning(f"Unknown operation for cost estimation: {operation}")
