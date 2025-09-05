@@ -103,6 +103,7 @@ yt_sub_playlist/
 - **`core/youtube_client.py`** - Low-level YouTube API operations with batching and caching
 - **`core/video_filtering.py`** - Video filtering logic and criteria management
 - **`core/playlist_manager.py`** - High-level workflow orchestration
+- **`core/quota_tracker.py`** - Quota management and estimation utilities
 - **`auth/oauth.py`** - OAuth2 flow and credential management
 - **`config/env_loader.py`** - Configuration loading and validation
 - **`config/schema.py`** - Configuration contracts and defaults
