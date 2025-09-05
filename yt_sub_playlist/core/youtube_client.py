@@ -14,6 +14,7 @@ import json
 import logging
 import os
 import time
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
 from googleapiclient.errors import HttpError
@@ -21,6 +22,45 @@ from googleapiclient.errors import HttpError
 from ..auth.oauth import get_authenticated_service
 
 logger = logging.getLogger(__name__)
+
+# Global API call counter for quota tracking
+api_call_counter: Dict[str, int] = {}
+
+
+def track_api_call(method_name: str) -> None:
+    """
+    Track an API call for quota analysis.
+    
+    Args:
+        method_name: The YouTube API method name (e.g., "playlistItems.list")
+    """
+    global api_call_counter
+    api_call_counter[method_name] = api_call_counter.get(method_name, 0) + 1
+    logger.debug(f"API call tracked: {method_name} (count: {api_call_counter[method_name]})")
+
+
+def dump_api_call_log(path: Path) -> None:
+    """
+    Write the API call counter to a JSON file.
+    
+    Args:
+        path: Path where to save the API call log
+    """
+    global api_call_counter
+    
+    try:
+        # Ensure parent directory exists
+        path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Write the counter to JSON file
+        with open(path, 'w') as f:
+            json.dump(api_call_counter, f, indent=2)
+        
+        total_calls = sum(api_call_counter.values())
+        logger.info(f"API call log dumped to {path} ({total_calls} total calls tracked)")
+        
+    except Exception as e:
+        logger.error(f"Failed to dump API call log to {path}: {e}")
 
 
 def parse_duration_to_seconds(duration: str) -> int:
@@ -138,6 +178,7 @@ class YouTubeClient:
                 )
                 
                 response = request.execute()
+                track_api_call("playlistItems.list")
                 
                 # Extract video IDs from this page
                 for item in response.get('items', []):
@@ -209,6 +250,7 @@ class YouTubeClient:
             )
             
             response = request.execute()
+            track_api_call("activities.list")
             activity_map = {}
             video_ids = []
 
@@ -333,6 +375,7 @@ class YouTubeClient:
                 )
                 
                 response = request.execute()
+                track_api_call("subscriptions.list")
                 subscriptions.extend(response.get("items", []))
                 
                 next_page_token = response.get("nextPageToken")
@@ -364,6 +407,7 @@ class YouTubeClient:
             )
             
             response = request.execute()
+            track_api_call("channels.list")
             items = response.get("items", [])
             
             if not items:
@@ -458,6 +502,7 @@ class YouTubeClient:
             )
             
             response = request.execute()
+            track_api_call("playlistItems.list")
             return response.get("items", [])
             
         except HttpError as e:
@@ -491,6 +536,7 @@ class YouTubeClient:
                 )
                 
                 response = request.execute()
+                track_api_call("videos.list")
                 batch_details = {}
                 
                 for item in response.get("items", []):
@@ -619,6 +665,7 @@ class YouTubeClient:
                     part="snippet", id=playlist_id
                 )
                 response = request.execute()
+                track_api_call("playlists.list")
 
                 if response.get("items"):
                     playlist_title = response["items"][0]["snippet"]["title"]
@@ -652,6 +699,7 @@ class YouTubeClient:
             )
             
             response = request.execute()
+            track_api_call("playlists.insert")
             new_playlist_id = response["id"]
             
             logger.info(f"Created new playlist: {playlist_name} ({new_playlist_id})")
@@ -692,6 +740,7 @@ class YouTubeClient:
             )
 
             response = request.execute()
+            track_api_call("playlistItems.insert")
             logger.debug(f"Added video {video_id} to playlist {playlist_id}")
             return True
 

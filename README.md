@@ -9,6 +9,7 @@ Automatically sync your latest YouTube subscription uploads into a custom playli
 ## Features
 
 - **Quota-optimized API usage** - Batched operations reduce quota consumption by 95%+
+- **Automated quota tracking** - Real-time API call monitoring with detailed usage analysis
 - **Intelligent duplicate detection** - Pre-insertion caching prevents wasted API calls
 - **Flexible video filtering**:
   - Minimum duration requirements (skip shorts)
@@ -19,6 +20,7 @@ Automatically sync your latest YouTube subscription uploads into a custom playli
 - **Multiple interfaces** - Command-line tool and shell scripts
 - **Comprehensive reporting** - CSV reports with detailed metadata
 - **Automated scheduling** - Cron-friendly design with proper logging
+- **Dynamic quota management** - Centralized cost configuration with intelligent fallbacks
 
 ---
 
@@ -85,10 +87,13 @@ yt_sub_playlist/
 ├── config/
 │   ├── __init__.py
 │   ├── env_loader.py         # Environment configuration management
-│   └── schema.py             # Configuration validation and defaults
+│   ├── schema.py             # Configuration validation and defaults
+│   ├── quota_costs.py        # YouTube API quota cost management
+│   └── youtube_quota_costs.json # Centralized quota cost configuration
 ├── data/
 │   ├── processed_videos.json # Cache of processed video IDs
 │   ├── playlist_cache/       # Cached playlist contents
+│   ├── api_call_log.json     # Real-time API usage tracking
 │   └── logs/                 # Application logs
 ├── scripts/
 │   ├── run.sh               # Production runner script
@@ -102,13 +107,14 @@ yt_sub_playlist/
 
 ### Module Overview
 
-- **`core/youtube_client.py`** - Low-level YouTube API operations with batching and caching
+- **`core/youtube_client.py`** - Low-level YouTube API operations with batching, caching, and automated call tracking
 - **`core/video_filtering.py`** - Video filtering logic and criteria management
 - **`core/playlist_manager.py`** - High-level workflow orchestration
 - **`core/quota_tracker.py`** - Quota management and estimation utilities
 - **`auth/oauth.py`** - OAuth2 flow and credential management
 - **`config/env_loader.py`** - Configuration loading and validation
 - **`config/schema.py`** - Configuration contracts and defaults
+- **`config/quota_costs.py`** - YouTube API quota cost management and loading
 
 ---
 
@@ -215,17 +221,101 @@ For more complex scheduling needs, consider using:
 
 ## API Quota Optimization
 
-This tool is designed to minimize YouTube API quota usage:
+This tool is designed to minimize YouTube API quota usage with intelligent monitoring:
 
+### Core Optimizations
 - **Batched operations** - Up to 50 videos per API call
 - **Smart caching** - 12-hour TTL for playlist contents
 - **Duplicate detection** - Pre-insertion filtering prevents waste
 - **Efficient subscription handling** - Uses uploads playlist lookup vs expensive search
 
+### Automated Quota Tracking
+- **Real-time API monitoring** - Every API call is automatically tracked
+- **Dynamic quota analysis** - Live usage data replaces static estimates  
+- **Centralized cost management** - All quota costs stored in `config/youtube_quota_costs.json`
+- **Intelligent reporting** - Detailed per-method breakdown with call counts and costs
+
+### Usage Analysis
+
+Run the quota simulator to analyze your actual API usage:
+
+```bash
+# After running the main application, analyze real usage
+./yt_sub_playlist/scripts/quota_test.sh
+
+# Or run directly
+python yt_sub_playlist/scripts/quota_simulator.py
+```
+
+**Sample output**:
+```
+📄 Loaded API call counts from yt_sub_playlist/data/api_call_log.json
+
+📊 Quota Usage Analysis:
+  channels.list            :  15 calls ×  1 units =   15 units
+  subscriptions.list       :   3 calls ×  1 units =    3 units
+  playlistItems.list       :  12 calls ×  1 units =   12 units
+  videos.list              :   8 calls ×  1 units =    8 units
+  playlistItems.insert     :  45 calls × 50 units = 2250 units
+  playlists.list           :   1 calls ×  1 units =    1 units
+
+🔢 Total Estimated Usage: 2289 / 10000 units
+```
+
 **Typical quota usage**:
 - Before optimization: ~8,000 units per run
-- After optimization: ~500-1,000 units per run
+- After optimization: ~500-1,000 units per run  
 - **~85-90% quota reduction**
+
+---
+
+## Quota Configuration Management
+
+### Centralized Cost Configuration
+
+All YouTube API quota costs are managed in `config/youtube_quota_costs.json`:
+
+```json
+{
+  "channels.list": 1,
+  "playlistItems.insert": 50,
+  "playlistItems.list": 1,
+  "playlists.list": 1,
+  "subscriptions.list": 1,
+  "videos.list": 1,
+  "search.list": 100,
+  "playlists.insert": 50
+}
+```
+
+### Dynamic Cost Loading
+
+The system automatically loads quota costs at runtime with intelligent fallbacks:
+
+```python
+from yt_sub_playlist.config.quota_costs import get_quota_cost
+
+# Automatically loads from JSON config with fallback to default (1)
+cost = get_quota_cost("videos.list")  # Returns: 1
+cost = get_quota_cost("playlistItems.insert")  # Returns: 50
+cost = get_quota_cost("unknown.method")  # Returns: 1 (with warning log)
+```
+
+### Automated Tracking
+
+Every API call is automatically tracked without manual intervention:
+
+- **Real-time counting** - All YouTube API methods are instrumented
+- **Persistent logging** - Usage data saved to `data/api_call_log.json`
+- **Session tracking** - Counters persist across application runs
+- **Error resilience** - Tracking continues even if individual API calls fail
+
+### Quota Analysis Workflow
+
+1. **Run your application**: `python -m yt_sub_playlist`
+2. **API calls are tracked automatically** - No configuration needed
+3. **Analyze real usage**: `./yt_sub_playlist/scripts/quota_test.sh`
+4. **Optimize based on data** - Focus on high-cost operations
 
 ---
 

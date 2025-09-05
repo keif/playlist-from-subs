@@ -12,10 +12,12 @@ This module provides the command-line interface and orchestrates the complete wo
 import argparse
 import logging
 import sys
+from pathlib import Path
 
 from .config.env_loader import load_config, setup_logging
 from .core.playlist_manager import PlaylistManager
 from .core.video_filtering import get_published_after_timestamp, parse_channel_whitelist
+from .core.youtube_client import dump_api_call_log
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +60,15 @@ Examples:
     )
 
     return parser
+
+
+def _dump_api_call_log():
+    """Dump API call log for quota analysis."""
+    try:
+        log_path = Path("yt_sub_playlist/data/api_call_log.json")
+        dump_api_call_log(log_path)
+    except Exception as e:
+        logger.debug(f"Failed to dump API call log: {e}")
 
 
 def main():
@@ -125,20 +136,27 @@ def main():
 
             if successful < total:
                 logger.warning(f"{total - successful} videos failed to add")
+                _dump_api_call_log()
                 sys.exit(1)
+        
+        # Dump API call log for quota analysis
+        _dump_api_call_log()
 
     except KeyboardInterrupt:
         logger.info("Interrupted by user")
+        _dump_api_call_log()
         sys.exit(130)
 
     except SystemExit:
         # Re-raise SystemExit (from authentication failures, etc.)
+        _dump_api_call_log()
         raise
 
     except Exception as e:
         logger.error(f"Unexpected error: {e}")
         if args.verbose:
             logger.exception("Full traceback:")
+        _dump_api_call_log()
         sys.exit(1)
 
 

@@ -1,23 +1,49 @@
 # quota_simulator.py
 
+import json
 import sys
 import os
+from pathlib import Path
 
 # Add parent directory to path to enable relative imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from config.quota_costs import get_quota_cost
 
-# Simulate usage — replace these numbers with your actual or expected call counts
-api_calls = {
-    "channels.list": 182,
-    "playlistItems.insert": 156,
-    "playlistItems.list": 180,
-    "playlists.list": 1,
-    "subscriptions.list": 4,
-    "videos.list": 180,
-    "search.list": 0,  # deprecated in your code, but useful for comparison
-}
+
+def load_api_call_log() -> dict:
+    """
+    Load API call counts from the generated log file.
+    
+    Returns:
+        Dictionary of API call counts, or fallback hardcoded values if log missing.
+    """
+    log_path = Path("yt_sub_playlist/data/api_call_log.json")
+    
+    try:
+        if log_path.exists():
+            with open(log_path, 'r') as f:
+                api_calls = json.load(f)
+            print(f"📄 Loaded API call counts from {log_path}")
+            return api_calls
+        else:
+            print(f"⚠️ API call log not found at {log_path}")
+            print("   Run the main application first to generate real usage data")
+            print("   Using fallback simulated values...")
+    except Exception as e:
+        print(f"⚠️ Failed to load API call log: {e}")
+        print("   Using fallback simulated values...")
+    
+    # Fallback hardcoded values
+    return {
+        "channels.list": 182,
+        "playlistItems.insert": 156,
+        "playlistItems.list": 180,
+        "playlists.list": 1,
+        "subscriptions.list": 4,
+        "videos.list": 180,
+        "search.list": 0,  # deprecated in your code, but useful for comparison
+    }
 
 DAILY_QUOTA_LIMIT = 10_000
 
@@ -53,10 +79,13 @@ def suggest_reductions(usage):
 
 
 def main():
+    api_calls = load_api_call_log()
     usage, total = calculate_quota_usage(api_calls)
-    print(f"\n📊 Simulated Quota Usage:")
+    print(f"\n📊 Quota Usage Analysis:")
     for method, cost in usage.items():
-        print(f"  {method:<25}: {cost} units")
+        count = api_calls.get(method, 0)
+        unit_cost = get_quota_cost(method)
+        print(f"  {method:<25}: {count:>3} calls × {unit_cost:>2} units = {cost:>4} units")
 
     print(f"\n🔢 Total Estimated Usage: {total} / {DAILY_QUOTA_LIMIT} units")
 
