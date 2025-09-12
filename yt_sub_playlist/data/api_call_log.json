@@ -1,8 +1,8 @@
 {
-  "playlists.insert": 1,
+  "playlists.list": 1,
   "subscriptions.list": 4,
   "channels.list": 180,
-  "playlistItems.list": 180,
+  "playlistItems.list": 184,
   "videos.list": 179,
-  "playlistItems.insert": 7
+  "playlistItems.insert": 112
 }
