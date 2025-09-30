@@ -10,6 +10,7 @@ This module provides the main business logic for managing YouTube playlists:
 
 import csv
 import logging
+import os
 from typing import Any, Dict, List
 
 from .youtube_client import YouTubeClient
@@ -22,18 +23,18 @@ logger = logging.getLogger(__name__)
 class PlaylistManager:
     """
     High-level manager for YouTube playlist automation.
-    
+
     Orchestrates the complete workflow:
     1. Fetch videos from subscriptions
     2. Apply filtering rules
     3. Sync videos to target playlist
     4. Generate reports and analytics
     """
-    
+
     def __init__(self, config: Dict[str, Any], data_dir: str = "yt_sub_playlist/data"):
         """
         Initialize playlist manager.
-        
+
         Args:
             config: Application configuration dictionary
             data_dir: Directory for data storage and caching
@@ -43,30 +44,30 @@ class PlaylistManager:
         self.client = YouTubeClient(data_dir)
         self.cache = VideoCache(data_dir=data_dir)
         self.filter = VideoFilter(config, self.cache)
-    
+
     def sync_subscription_videos_to_playlist(
-        self, 
-        playlist_id: str, 
+        self,
+        playlist_id: str,
         published_after: str,
         channel_whitelist: set = None,
         dry_run: bool = False
     ) -> List[Dict[str, Any]]:
         """
         Main orchestration method for syncing subscription videos to playlist.
-        
+
         Args:
-            playlist_id: Target playlist ID 
+            playlist_id: Target playlist ID
             published_after: RFC 3339 timestamp for filtering recent videos
             channel_whitelist: Set of allowed channel IDs (None = allow all)
             dry_run: If True, don't actually add videos
-            
+
         Returns:
             List of video metadata dicts with 'added' field indicating success
         """
         # Step 1: Fetch recent subscription videos
         logger.info(f"Fetching videos published after {published_after}")
         videos = self.client.get_recent_uploads_from_subscriptions(
-            published_after=published_after, 
+            published_after=published_after,
             max_per_channel=5
         )
 
@@ -87,7 +88,7 @@ class PlaylistManager:
             videos=filtered_videos,
             dry_run=dry_run
         )
-    
+
     def add_videos_to_playlist(
         self,
         playlist_id: str,
@@ -125,7 +126,7 @@ class PlaylistManager:
         for video in videos:
             video_id = video["video_id"]
             added = results.get(video_id, False)
-            
+
             # Update cache for successful additions
             if added:
                 self.cache.mark_processed(
@@ -134,7 +135,7 @@ class PlaylistManager:
                 logger.info(f"✅ Added: {video['title']}")
             else:
                 logger.warning(f"❌ Failed to add: {video['title']}")
-            
+
             # Add the 'added' field to the video metadata
             video_result = dict(video, added=added)
             detailed_results.append(video_result)
@@ -142,41 +143,41 @@ class PlaylistManager:
         return detailed_results
 
     def get_or_create_playlist(
-        self, 
-        playlist_id: str = None, 
-        playlist_name: str = None, 
+        self,
+        playlist_id: str = None,
+        playlist_name: str = None,
         privacy_status: str = "unlisted"
     ) -> str:
         """
         Get existing playlist or create new one.
-        
+
         Args:
             playlist_id: Existing playlist ID (if provided)
             playlist_name: Name for new playlist (if creating)
             privacy_status: Privacy setting for new playlist
-            
+
         Returns:
             Playlist ID
-            
+
         Raises:
             SystemExit: If playlist operations fail
         """
         resolved_id = self.client.get_or_create_playlist(
             playlist_id=playlist_id,
-            playlist_name=playlist_name or "Auto Playlist from Subscriptions", 
+            playlist_name=playlist_name or "Auto Playlist from Subscriptions",
             privacy_status=privacy_status
         )
-        
+
         if not resolved_id:
             logger.error("Failed to get or create target playlist")
             raise SystemExit(1)
-            
+
         return resolved_id
-    
+
     def write_report(self, video_results: List[Dict[str, Any]], report_path: str) -> None:
         """
         Write video metadata to a CSV report file.
-        
+
         Args:
             video_results: List of video metadata dicts with 'added' field
             report_path: Path to write the CSV file
@@ -186,6 +187,7 @@ class PlaylistManager:
             return
             
         try:
+            os.makedirs(os.path.dirname(report_path), exist_ok=True)
             with open(report_path, 'w', newline='', encoding='utf-8') as csvfile:
                 fieldnames = [
                     'title', 'video_id', 'channel_title', 'channel_id', 
