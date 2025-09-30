@@ -1,0 +1,82 @@
+[
+  {
+    "title": "Building a Modern REST API with FastAPI and Python",
+    "video_id": "0RS9W8MtZe4",
+    "channel_title": "ArjanCodes",
+    "channel_id": "UCVhQ2NnY5Rskt6UjCUkJ_DA",
+    "published_at": "2024-01-15T10:30:00Z",
+    "duration_seconds": 1245,
+    "live_broadcast": "none",
+    "added": true
+  },
+  {
+    "title": "The Complete Guide to Python Virtual Environments",
+    "video_id": "KxvKCSwlUv8",
+    "channel_title": "Tech With Tim",
+    "channel_id": "UC4JX40jDee_tINbkjycV4Sg",
+    "published_at": "2024-01-14T14:22:00Z",
+    "duration_seconds": 892,
+    "live_broadcast": "none",
+    "added": true
+  },
+  {
+    "title": "React State Management in 2024: What You Need to Know",
+    "video_id": "35lXWvCuM8o",
+    "channel_title": "Fireship",
+    "channel_id": "UCsBjURrPoezykLs9EqgamOA",
+    "published_at": "2024-01-13T16:45:00Z",
+    "duration_seconds": 567,
+    "live_broadcast": "none",
+    "added": true
+  },
+  {
+    "title": "Docker Containers Explained - Deep Dive Tutorial",
+    "video_id": "rIrNIzy6U_g",
+    "channel_title": "NetworkChuck",
+    "channel_id": "UC9x0AN7BWHpCDHSm9NiJFJQ",
+    "published_at": "2024-01-12T12:15:00Z",
+    "duration_seconds": 1834,
+    "live_broadcast": "none",
+    "added": true
+  },
+  {
+    "title": "Why You Should Use TypeScript in 2024",
+    "video_id": "zQnBQ4tB3ZA",
+    "channel_title": "ThePrimeTime",
+    "channel_id": "UCUyeluBRhGPCW4rPe_UvBZQ",
+    "published_at": "2024-01-11T09:30:00Z",
+    "duration_seconds": 723,
+    "live_broadcast": "none",
+    "added": true
+  },
+  {
+    "title": "Machine Learning Fundamentals: Neural Networks Explained",
+    "video_id": "aircAruvnKk",
+    "channel_title": "3Blue1Brown",
+    "channel_id": "UCYO_jab_esuFRV4b17AJtAw",
+    "published_at": "2024-01-10T11:20:00Z",
+    "duration_seconds": 1156,
+    "live_broadcast": "none",
+    "added": true
+  },
+  {
+    "title": "Advanced Git Workflows for Teams",
+    "video_id": "aJnFGMclhU8",
+    "channel_title": "GitKraken",
+    "channel_id": "UCp06FAzrFalo3txskS1gCfA",
+    "published_at": "2024-01-09T13:45:00Z",
+    "duration_seconds": 945,
+    "live_broadcast": "none",
+    "added": true
+  },
+  {
+    "title": "CSS Grid vs Flexbox: When to Use Each",
+    "video_id": "RSIclWvNTdQ",
+    "channel_title": "Kevin Powell",
+    "channel_id": "UCJZv4d5rbIKd4QHMPkcABCw",
+    "published_at": "2024-01-08T15:10:00Z",
+    "duration_seconds": 834,
+    "live_broadcast": "none",
+    "added": true
+  }
+]

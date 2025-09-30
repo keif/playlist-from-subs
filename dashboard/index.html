@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Playlist Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🎥 YouTube Playlist Dashboard</h1>
+            <p class="subtitle">Preview and manage your automated playlist</p>
+        </header>
+
+        <div class="controls">
+            <div class="file-input-section">
+                <label for="file-input" class="file-input-label">
+                    📁 Load Playlist JSON
+                </label>
+                <input type="file" id="file-input" accept=".json" class="file-input">
+                <span class="file-info">or drag & drop a JSON file anywhere</span>
+            </div>
+            
+            <button id="load-sample" class="button-secondary">Load Sample Data</button>
+        </div>
+
+        <div class="playlist-stats" id="playlist-stats" style="display: none;">
+            <div class="stat">
+                <span class="stat-number" id="video-count">0</span>
+                <span class="stat-label">Videos</span>
+            </div>
+            <div class="stat">
+                <span class="stat-number" id="total-duration">0</span>
+                <span class="stat-label">Total Duration</span>
+            </div>
+            <div class="stat">
+                <span class="stat-number" id="channel-count">0</span>
+                <span class="stat-label">Channels</span>
+            </div>
+        </div>
+
+        <div class="drop-zone" id="drop-zone">
+            <div class="drop-zone-content">
+                <div class="drop-icon">📄</div>
+                <p>Drop your playlist.json file here</p>
+                <p class="drop-hint">or click "Load Playlist JSON" above</p>
+            </div>
+        </div>
+
+        <div class="playlist-container" id="playlist-container" style="display: none;">
+            <div class="playlist-header">
+                <h2 id="playlist-title">Your Playlist</h2>
+                <div class="playlist-actions">
+                    <button id="clear-playlist" class="button-secondary">Clear</button>
+                </div>
+            </div>
+            <div class="video-grid" id="video-grid">
+                <!-- Videos will be populated here by JavaScript -->
+            </div>
+        </div>
+
+        <div class="error-message" id="error-message" style="display: none;">
+            <span class="error-icon">⚠️</span>
+            <span id="error-text"></span>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
