@@ -332,7 +332,7 @@ if __name__ == '__main__':
     # Start the Flask development server
     app.run(
         host='127.0.0.1',
-        port=5000,
+        port=5001,  # Changed from 5000 to avoid macOS AirPlay conflict
         debug=True,
         use_reloader=True
     )

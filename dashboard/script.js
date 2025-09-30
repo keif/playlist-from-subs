@@ -1,7 +1,7 @@
 class PlaylistDashboard {
     constructor() {
         this.currentPlaylist = [];
-        this.apiBaseUrl = 'http://localhost:5000/api';
+        this.apiBaseUrl = 'http://localhost:5001/api';
         this.isBackendMode = false;
         this.init();
     }
