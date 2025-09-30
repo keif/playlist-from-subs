@@ -36,13 +36,13 @@ Automatically sync your latest YouTube subscription uploads into a custom playli
 
 ## Installation
 
-```bash
-git clone https://github.com/yourusername/yt-sub-playlist.git
-cd yt-sub-playlist
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
+    ```bash
+    git clone https://github.com/yourusername/yt-sub-playlist.git
+    cd yt-sub-playlist
+    python3 -m venv venv
+    source venv/bin/activate
+    pip install -r requirements.txt
+    ```
 
 ---
 
@@ -71,39 +71,39 @@ pip install -r requirements.txt
 
 The codebase is organized as a modular Python package:
 
-```
-yt_sub_playlist/
-├── __main__.py               # CLI entry point
-├── __init__.py
-├── core/
-│   ├── __init__.py
-│   ├── youtube_client.py     # YouTube API wrapper with quota optimization
-│   ├── video_filtering.py    # Video filtering and processing logic
-│   ├── playlist_manager.py   # High-level playlist orchestration
-│   └── quota_tracker.py      # Quota management and estimation
-├── auth/
-│   ├── __init__.py
-│   └── oauth.py              # OAuth2 authentication handling
-├── config/
-│   ├── __init__.py
-│   ├── env_loader.py         # Environment configuration management
-│   ├── schema.py             # Configuration validation and defaults
-│   ├── quota_costs.py        # YouTube API quota cost management
-│   └── youtube_quota_costs.json # Centralized quota cost configuration
-├── data/
-│   ├── processed_videos.json # Cache of processed video IDs
-│   ├── playlist_cache/       # Cached playlist contents
-│   ├── api_call_log.json     # (Ignored) Real-time API usage tracking; not committed
-│   └── logs/                 # Application logs
-├── scripts/
-│   ├── run.sh               # Production runner script
-│   ├── dryrun.sh            # Dry-run testing script
-│   ├── reset-auth.sh        # Authentication reset utility
-│   ├── quota_test.sh        # Quota usage simulator runner
-│   └── quota_simulator.py   # Quota estimation utility
-└── reports/
-    └── videos_added.csv     # Generated reports
-```
+    ```
+    yt_sub_playlist/
+    ├── __main__.py               # CLI entry point
+    ├── __init__.py
+    ├── core/
+    │   ├── __init__.py
+    │   ├── youtube_client.py     # YouTube API wrapper with quota optimization
+    │   ├── video_filtering.py    # Video filtering and processing logic
+    │   ├── playlist_manager.py   # High-level playlist orchestration
+    │   └── quota_tracker.py      # Quota management and estimation
+    ├── auth/
+    │   ├── __init__.py
+    │   └── oauth.py              # OAuth2 authentication handling
+    ├── config/
+    │   ├── __init__.py
+    │   ├── env_loader.py         # Environment configuration management
+    │   ├── schema.py             # Configuration validation and defaults
+    │   ├── quota_costs.py        # YouTube API quota cost management
+    │   └── youtube_quota_costs.json # Centralized quota cost configuration
+    ├── data/
+    │   ├── processed_videos.json # Cache of processed video IDs
+    │   ├── playlist_cache/       # Cached playlist contents
+    │   ├── api_call_log.json     # (Ignored) Real-time API usage tracking; not committed
+    │   └── logs/                 # Application logs
+    ├── scripts/
+    │   ├── run.sh               # Production runner script
+    │   ├── dryrun.sh            # Dry-run testing script
+    │   ├── reset-auth.sh        # Authentication reset utility
+    │   ├── quota_test.sh        # Quota usage simulator runner
+    │   └── quota_simulator.py   # Quota estimation utility
+    └── reports/
+        └── videos_added.csv     # Generated reports
+    ```
 
 ### Module Overview
 
