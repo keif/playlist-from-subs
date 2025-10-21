@@ -9,6 +9,7 @@ This module provides the main business logic for managing YouTube playlists:
 """
 
 import csv
+import json
 import logging
 import os
 from typing import Any, Dict, List
@@ -176,7 +177,7 @@ class PlaylistManager:
 
     def write_report(self, video_results: List[Dict[str, Any]], report_path: str) -> None:
         """
-        Write video metadata to a CSV report file.
+        Write video metadata to a CSV report file and automatically update dashboard JSON.
 
         Args:
             video_results: List of video metadata dicts with 'added' field
@@ -187,25 +188,66 @@ class PlaylistManager:
             return
 
         try:
+            # Write CSV report
             os.makedirs(os.path.dirname(report_path), exist_ok=True)
             with open(report_path, 'w', newline='', encoding='utf-8') as csvfile:
                 fieldnames = [
-                    'title', 'video_id', 'channel_title', 'channel_id', 
+                    'title', 'video_id', 'channel_title', 'channel_id',
                     'published_at', 'duration_seconds', 'live_broadcast', 'added'
                 ]
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-                
+
                 writer.writeheader()
                 for video in video_results:
                     # Only write the fields we want in the CSV
                     row = {field: video.get(field, '') for field in fieldnames}
                     writer.writerow(row)
-            
+
             added_count = sum(1 for v in video_results if v.get('added', False))
             logger.info(f"Report written to {report_path} ({added_count}/{len(video_results)} videos added)")
-            
+
+            # Automatically update dashboard JSON
+            self._write_dashboard_json(video_results)
+
         except Exception as e:
             logger.warning(f"Failed to write report to {report_path}: {e}")
+
+    def _write_dashboard_json(self, video_results: List[Dict[str, Any]]) -> None:
+        """
+        Write video results to dashboard JSON file.
+
+        Args:
+            video_results: List of video metadata dicts
+        """
+        try:
+            # Determine dashboard JSON path relative to project root
+            # Assumes this module is at yt_sub_playlist/core/playlist_manager.py
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            dashboard_json_path = os.path.join(project_root, 'dashboard', 'playlist.json')
+
+            # Convert video results to dashboard format
+            playlist_data = []
+            for video in video_results:
+                playlist_data.append({
+                    'title': video.get('title', ''),
+                    'video_id': video.get('video_id', ''),
+                    'channel_title': video.get('channel_title', ''),
+                    'channel_id': video.get('channel_id', ''),
+                    'published_at': video.get('published_at', ''),
+                    'duration_seconds': int(video.get('duration_seconds', 0)) if video.get('duration_seconds') else 0,
+                    'live_broadcast': video.get('live_broadcast', 'none'),
+                    'added': bool(video.get('added', False))
+                })
+
+            # Write JSON file
+            os.makedirs(os.path.dirname(dashboard_json_path), exist_ok=True)
+            with open(dashboard_json_path, 'w', encoding='utf-8') as jsonfile:
+                json.dump(playlist_data, jsonfile, indent=2, ensure_ascii=False)
+
+            logger.info(f"Dashboard JSON updated: {dashboard_json_path} ({len(playlist_data)} videos)")
+
+        except Exception as e:
+            logger.warning(f"Failed to write dashboard JSON: {e}")
     
     def get_cache_stats(self) -> Dict[str, int]:
         """
