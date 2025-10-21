@@ -222,3 +222,8 @@ yt_sub_playlist/data/playlist_cache/*
 
 # notes
 _notes/
+
+# generated reports
+reports/
+yt_sub_playlist/reports/
+yt_sub_playlist/data/api_call_log.json
