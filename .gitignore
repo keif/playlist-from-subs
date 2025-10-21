@@ -219,3 +219,6 @@ processed_videos.json
 # Cache files
 yt_sub_playlist/data/playlist_cache/*
 !yt_sub_playlist/data/playlist_cache/.gitkeep
+
+# notes
+_notes/

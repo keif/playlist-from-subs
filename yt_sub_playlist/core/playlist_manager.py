@@ -185,7 +185,7 @@ class PlaylistManager:
         if not video_results:
             logger.info("No videos to report")
             return
-            
+
         try:
             os.makedirs(os.path.dirname(report_path), exist_ok=True)
             with open(report_path, 'w', newline='', encoding='utf-8') as csvfile:

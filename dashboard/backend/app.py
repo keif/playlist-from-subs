@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 
 from flask import Flask, jsonify, request, send_from_directory
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 
 # Add the parent directory to Python path to import yt_sub_playlist
 sys.path.append(str(Path(__file__).parent.parent.parent))
@@ -30,7 +30,14 @@ except ImportError as e:
     CLI_AVAILABLE = False
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for frontend development
+# Enable CORS for frontend development - permissive for local development
+CORS(app, resources={
+    r"/*": {
+        "origins": "*",  # Allow all origins for local development
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -287,6 +294,7 @@ def refresh_playlist():
         }), 500
 
 @app.route('/api/status', methods=['GET'])
+@cross_origin()
 def get_status():
     """Get system status and health check."""
     try:
