@@ -29,15 +29,25 @@ except ImportError as e:
     print("API will work with static data only")
     CLI_AVAILABLE = False
 
+# Import new API blueprints
+from config_api import config_bp
+from channels_api import channels_bp
+from stats_api import stats_bp
+
 app = Flask(__name__)
 # Enable CORS for frontend development - permissive for local development
 CORS(app, resources={
     r"/*": {
         "origins": "*",  # Allow all origins for local development
-        "methods": ["GET", "POST", "OPTIONS"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"]
     }
 })
+
+# Register blueprints
+app.register_blueprint(config_bp)
+app.register_blueprint(channels_bp)
+app.register_blueprint(stats_bp)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

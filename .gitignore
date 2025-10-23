@@ -227,3 +227,7 @@ _notes/
 reports/
 yt_sub_playlist/reports/
 yt_sub_playlist/data/api_call_log.json
+
+# user configuration
+config.json
+config.json.bak
