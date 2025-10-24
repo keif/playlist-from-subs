@@ -23,23 +23,109 @@ logger = logging.getLogger(__name__)
 CACHE_FILE = 'processed_videos.json'
 CACHE_TTL_DAYS = 30
 
+# Config file path
+CONFIG_JSON_PATH = Path("config.json")
+
+
+def load_config_json() -> Dict[str, Any]:
+    """
+    Load user preferences from config.json file.
+
+    Returns:
+        Dictionary with config values, or empty dict if file doesn't exist
+    """
+    if not CONFIG_JSON_PATH.exists():
+        logger.debug("config.json not found, using defaults and environment variables")
+        return {}
+
+    try:
+        with open(CONFIG_JSON_PATH, 'r', encoding='utf-8') as f:
+            json_config = json.load(f)
+        logger.debug(f"Loaded configuration from {CONFIG_JSON_PATH}")
+        return json_config
+    except (json.JSONDecodeError, OSError) as e:
+        logger.warning(f"Failed to load {CONFIG_JSON_PATH}: {e}")
+        return {}
+
 
 def load_config() -> Dict[str, Any]:
-    """Load configuration from environment variables with defaults."""
+    """
+    Load configuration from multiple sources with precedence:
+    1. Environment variables (.env) - highest priority
+    2. Configuration file (config.json)
+    3. Hardcoded defaults - lowest priority
+
+    Note: CLI arguments override all of these and are handled in __main__.py
+    """
     load_dotenv()
 
+    # Load config.json preferences
+    json_config = load_config_json()
+
+    # Define defaults
+    defaults = {
+        "playlist_name": "Auto Playlist from Subscriptions",
+        "playlist_visibility": "unlisted",
+        "min_duration_seconds": 60,
+        "lookback_hours": 24,
+        "max_videos": 50,
+        "skip_live_content": True,
+        "channel_whitelist": None,
+    }
+
+    # Build config with precedence: .env > config.json > defaults
+    # Note: playlist_id is only from .env (not in config.json)
     config = {
         "playlist_id": os.getenv("PLAYLIST_ID"),
-        "playlist_name": os.getenv("PLAYLIST_NAME", "Auto Playlist from Subscriptions"),
-        "playlist_visibility": os.getenv("PLAYLIST_VISIBILITY", "unlisted"),
-        "min_duration_seconds": int(os.getenv("VIDEO_MIN_DURATION_SECONDS", "60")),
-        "lookback_hours": int(os.getenv("LOOKBACK_HOURS", "24")),
-        "channel_whitelist": parse_channel_whitelist(os.getenv("CHANNEL_ID_WHITELIST")),
-        "max_videos": int(os.getenv("MAX_VIDEOS_TO_FETCH", "50")),
-        "skip_live_content": os.getenv("SKIP_LIVE_CONTENT", "true").lower() in ("true", "1", "yes"),
+        "playlist_name": os.getenv("PLAYLIST_NAME") or json_config.get("playlist_name", defaults["playlist_name"]),
+        "playlist_visibility": os.getenv("PLAYLIST_VISIBILITY") or json_config.get("playlist_visibility", defaults["playlist_visibility"]),
+        "min_duration_seconds": int(os.getenv("VIDEO_MIN_DURATION_SECONDS") or json_config.get("min_duration_seconds", defaults["min_duration_seconds"])),
+        "lookback_hours": int(os.getenv("LOOKBACK_HOURS") or json_config.get("lookback_hours", defaults["lookback_hours"])),
+        "max_videos": int(os.getenv("MAX_VIDEOS_TO_FETCH") or json_config.get("max_videos", defaults["max_videos"])),
+        "skip_live_content": _parse_bool(os.getenv("SKIP_LIVE_CONTENT"), json_config.get("skip_live_content", defaults["skip_live_content"])),
+        "channel_whitelist": _merge_channel_whitelist(
+            os.getenv("CHANNEL_ID_WHITELIST"),
+            json_config.get("channel_whitelist")
+        ),
     }
 
     return config
+
+
+def _parse_bool(env_value: Optional[str], json_value: Any) -> bool:
+    """
+    Parse boolean from environment variable or JSON config.
+    Environment variable takes precedence if set.
+    """
+    if env_value is not None:
+        return env_value.lower() in ("true", "1", "yes")
+    if isinstance(json_value, bool):
+        return json_value
+    return False
+
+
+def _merge_channel_whitelist(env_whitelist: Optional[str], json_whitelist: Optional[Any]) -> Optional[Set[str]]:
+    """
+    Merge channel whitelist from .env and config.json.
+    Environment variable (.env) takes precedence if set.
+
+    Args:
+        env_whitelist: Comma-separated channel IDs from .env
+        json_whitelist: List of channel IDs from config.json
+
+    Returns:
+        Set of channel IDs, or None if no whitelist specified
+    """
+    # .env takes precedence
+    if env_whitelist:
+        return parse_channel_whitelist(env_whitelist)
+
+    # Fall back to config.json
+    if json_whitelist and isinstance(json_whitelist, list):
+        channel_ids = {ch_id for ch_id in json_whitelist if ch_id}
+        return channel_ids if channel_ids else None
+
+    return None
 
 
 def parse_channel_whitelist(whitelist_str: Optional[str]) -> Optional[Set[str]]:

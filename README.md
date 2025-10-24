@@ -173,25 +173,62 @@ python -m yt_sub_playlist --dry-run --report reports/preview.csv
 
 **CSV Fields**: title, video_id, channel_title, channel_id, published_at, duration_seconds, live_broadcast, added
 
-### Environment Configuration
+### Configuration
 
-Key settings in `.env`:
+**Two Configuration Methods:**
+
+1. **Web Dashboard** (Recommended): Start the dashboard and use the Settings page to manage configuration visually:
+   ```bash
+   cd dashboard/backend && python app.py
+   # Open http://localhost:5001/config.html
+   ```
+
+2. **Manual Configuration**: Edit configuration files directly (see below)
+
+**Configuration Sources & Precedence:**
+
+The system loads configuration from multiple sources with the following priority (highest to lowest):
+
+1. **CLI arguments** (e.g., `--limit 10`)
+2. **Environment variables** (`.env` file) - for secrets and overrides
+3. **User preferences** (`config.json` file) - managed via dashboard
+4. **Built-in defaults**
+
+**Environment Variables (`.env`):**
+
+Use for secrets and system-specific overrides:
 
 ```bash
-# Playlist configuration
+# API credentials (secrets - must be in .env)
 PLAYLIST_ID=PLxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx  # Optional: use existing playlist
+
+# User preferences (can be overridden in config.json via dashboard)
 PLAYLIST_NAME="My Auto Playlist"              # Name for new playlists
 PLAYLIST_VISIBILITY=unlisted                  # private, unlisted, or public
-
-# Video filtering
 VIDEO_MIN_DURATION_SECONDS=120               # Skip videos shorter than 2 minutes
 SKIP_LIVE_CONTENT=true                       # Skip livestreams and premieres
 CHANNEL_ID_WHITELIST=UC1234,UC5678          # Optional: only include these channels
-
-# Fetching behavior
 LOOKBACK_HOURS=24                            # How far back to look for videos
 MAX_VIDEOS_TO_FETCH=50                       # Maximum videos to process per run
 ```
+
+**User Preferences (`config.json`):**
+
+Automatically created when using the dashboard Settings page. Example:
+
+```json
+{
+  "playlist_name": "Auto Playlist from Subscriptions",
+  "playlist_visibility": "unlisted",
+  "min_duration_seconds": 120,
+  "lookback_hours": 48,
+  "max_videos": 50,
+  "skip_live_content": true,
+  "channel_whitelist": null
+}
+```
+
+**Note**: Values in `.env` take precedence over `config.json`. This allows you to override dashboard settings when needed.
 
 ---
 
