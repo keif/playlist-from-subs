@@ -34,7 +34,10 @@ class ConfigManager:
         "lookback_hours": 24,
         "max_videos": 50,
         "skip_live_content": True,
-        "channel_whitelist": None
+        "channel_whitelist": None,  # Legacy - kept for backward compatibility
+        "channel_filter_mode": "none",
+        "channel_allowlist": None,
+        "channel_blocklist": None
     }
 
     # Validation ranges
@@ -43,7 +46,8 @@ class ConfigManager:
         "lookback_hours": {"min": 1, "max": 168, "type": int},
         "max_videos": {"min": 1, "max": 200, "type": int},
         "playlist_visibility": {"options": ["private", "unlisted", "public"]},
-        "skip_live_content": {"type": bool}
+        "skip_live_content": {"type": bool},
+        "channel_filter_mode": {"options": ["none", "allowlist", "blocklist"]}
     }
 
     def __init__(self, config_file: Optional[Path] = None):
@@ -160,7 +164,7 @@ class ConfigManager:
                 if value not in rules["options"]:
                     errors.append(f"{key} must be one of: {', '.join(rules['options'])}")
 
-        # Validate channel_whitelist format
+        # Validate channel_whitelist format (legacy)
         if "channel_whitelist" in config:
             whitelist = config["channel_whitelist"]
             if whitelist is not None:
@@ -169,6 +173,45 @@ class ConfigManager:
                 else:
                     if not all(isinstance(ch, str) for ch in whitelist):
                         errors.append("channel_whitelist must contain only strings")
+
+        # Validate channel_allowlist format
+        if "channel_allowlist" in config:
+            allowlist = config["channel_allowlist"]
+            if allowlist is not None:
+                if not isinstance(allowlist, list):
+                    errors.append("channel_allowlist must be a list or null")
+                else:
+                    if not all(isinstance(ch, str) for ch in allowlist):
+                        errors.append("channel_allowlist must contain only strings")
+
+        # Validate channel_blocklist format
+        if "channel_blocklist" in config:
+            blocklist = config["channel_blocklist"]
+            if blocklist is not None:
+                if not isinstance(blocklist, list):
+                    errors.append("channel_blocklist must be a list or null")
+                else:
+                    if not all(isinstance(ch, str) for ch in blocklist):
+                        errors.append("channel_blocklist must contain only strings")
+
+        # Validate channel filter mode consistency
+        mode = config.get("channel_filter_mode", "none")
+        allowlist = config.get("channel_allowlist")
+        blocklist = config.get("channel_blocklist")
+
+        if allowlist and blocklist:
+            # Check for conflicts
+            allowlist_set = set(allowlist) if allowlist else set()
+            blocklist_set = set(blocklist) if blocklist else set()
+            conflicts = allowlist_set & blocklist_set
+            if conflicts:
+                errors.append(f"Channels cannot be in both allowlist and blocklist")
+
+        if mode == "allowlist" and blocklist:
+            errors.append("Cannot use blocklist when filter mode is 'allowlist'")
+
+        if mode == "blocklist" and allowlist:
+            errors.append("Cannot use allowlist when filter mode is 'blocklist'")
 
         return {
             "valid": len(errors) == 0,
@@ -247,6 +290,34 @@ class ConfigManager:
         """
         config = self.load_config()
 
+        # Build channel filter summary
+        filter_mode = config.get("channel_filter_mode", "none")
+        channel_filter_summary = {
+            "mode": filter_mode
+        }
+
+        if filter_mode == "allowlist":
+            allowlist = config.get("channel_allowlist", [])
+            channel_filter_summary["allowlist"] = {
+                "enabled": True,
+                "count": len(allowlist) if allowlist else 0,
+                "channels": allowlist
+            }
+        elif filter_mode == "blocklist":
+            blocklist = config.get("channel_blocklist", [])
+            channel_filter_summary["blocklist"] = {
+                "enabled": True,
+                "count": len(blocklist) if blocklist else 0,
+                "channels": blocklist
+            }
+        elif config.get("channel_whitelist"):
+            # Legacy whitelist
+            channel_filter_summary["legacy_whitelist"] = {
+                "enabled": True,
+                "count": len(config["channel_whitelist"]),
+                "channels": config["channel_whitelist"]
+            }
+
         return {
             "playlist": {
                 "name": config["playlist_name"],
@@ -258,9 +329,5 @@ class ConfigManager:
                 "max_videos": config["max_videos"],
                 "skip_live_content": config["skip_live_content"]
             },
-            "channel_whitelist": {
-                "enabled": config["channel_whitelist"] is not None,
-                "count": len(config["channel_whitelist"]) if config["channel_whitelist"] else 0,
-                "channels": config["channel_whitelist"]
-            }
+            "channel_filter": channel_filter_summary
         }

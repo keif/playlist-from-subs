@@ -70,7 +70,10 @@ def load_config() -> Dict[str, Any]:
         "lookback_hours": 24,
         "max_videos": 50,
         "skip_live_content": True,
-        "channel_whitelist": None,
+        "channel_whitelist": None,  # Legacy
+        "channel_filter_mode": "none",
+        "channel_allowlist": None,
+        "channel_blocklist": None,
     }
 
     # Build config with precedence: .env > config.json > defaults
@@ -87,7 +90,19 @@ def load_config() -> Dict[str, Any]:
             os.getenv("CHANNEL_ID_WHITELIST"),
             json_config.get("channel_whitelist")
         ),
+        "channel_filter_mode": os.getenv("CHANNEL_FILTER_MODE") or json_config.get("channel_filter_mode", defaults["channel_filter_mode"]),
+        "channel_allowlist": _merge_channel_list(
+            os.getenv("CHANNEL_ALLOWLIST"),
+            json_config.get("channel_allowlist")
+        ),
+        "channel_blocklist": _merge_channel_list(
+            os.getenv("CHANNEL_BLOCKLIST"),
+            json_config.get("channel_blocklist")
+        ),
     }
+
+    # Migrate legacy whitelist to new system if needed
+    config = _migrate_legacy_channel_filter(config)
 
     return config
 
@@ -131,23 +146,78 @@ def _merge_channel_whitelist(env_whitelist: Optional[str], json_whitelist: Optio
 def parse_channel_whitelist(whitelist_str: Optional[str]) -> Optional[Set[str]]:
     """
     Parse comma-separated channel ID whitelist from environment variable.
-    
+
     Args:
         whitelist_str: Comma-separated string of channel IDs, or None
-        
+
     Returns:
         Set of channel IDs, or None if no whitelist specified
     """
     if not whitelist_str or not whitelist_str.strip():
         return None
-    
+
     channel_ids = {
-        channel_id.strip() 
-        for channel_id in whitelist_str.split(',') 
+        channel_id.strip()
+        for channel_id in whitelist_str.split(',')
         if channel_id.strip()
     }
-    
+
     return channel_ids if channel_ids else None
+
+
+def _merge_channel_list(env_list: Optional[str], json_list: Optional[Any]) -> Optional[Set[str]]:
+    """
+    Merge channel list from .env and config.json.
+    Environment variable (.env) takes precedence if set.
+
+    Args:
+        env_list: Comma-separated channel IDs from .env
+        json_list: List of channel IDs from config.json
+
+    Returns:
+        Set of channel IDs, or None if no list specified
+    """
+    # .env takes precedence
+    if env_list:
+        return parse_channel_whitelist(env_list)
+
+    # Fall back to config.json
+    if json_list and isinstance(json_list, list):
+        channel_ids = {ch_id for ch_id in json_list if ch_id}
+        return channel_ids if channel_ids else None
+
+    return None
+
+
+def _migrate_legacy_channel_filter(config: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Migrate legacy channel_whitelist to new allowlist/blocklist system.
+
+    If channel_whitelist is set but new system is not configured,
+    migrate to allowlist mode automatically.
+
+    Args:
+        config: Configuration dictionary
+
+    Returns:
+        Updated configuration with migration applied
+    """
+    # If new system is already configured, skip migration
+    if config.get("channel_filter_mode") != "none":
+        return config
+
+    if config.get("channel_allowlist") or config.get("channel_blocklist"):
+        return config
+
+    # Check for legacy whitelist
+    legacy_whitelist = config.get("channel_whitelist")
+    if legacy_whitelist:
+        logger.info("Migrating legacy channel_whitelist to channel_allowlist")
+        config["channel_filter_mode"] = "allowlist"
+        config["channel_allowlist"] = legacy_whitelist
+        # Keep legacy field for backward compatibility
+
+    return config
 
 
 def setup_logging(verbose: bool = False) -> None:

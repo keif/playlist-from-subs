@@ -198,6 +198,140 @@ def update_whitelist():
         }), 500
 
 
+@channels_bp.route('/filter-config', methods=['GET'])
+def get_filter_config():
+    """
+    Get current channel filter configuration (mode, allowlist, blocklist).
+
+    Returns:
+        JSON response with filter configuration
+    """
+    try:
+        from config_manager import ConfigManager
+
+        config_manager = ConfigManager()
+        config = config_manager.load_config()
+
+        filter_mode = config.get("channel_filter_mode", "none")
+        allowlist = config.get("channel_allowlist")
+        blocklist = config.get("channel_blocklist")
+
+        return jsonify({
+            'success': True,
+            'filter_mode': filter_mode,
+            'allowlist': {
+                'enabled': filter_mode == "allowlist",
+                'channel_ids': allowlist if allowlist else [],
+                'count': len(allowlist) if allowlist else 0
+            },
+            'blocklist': {
+                'enabled': filter_mode == "blocklist",
+                'channel_ids': blocklist if blocklist else [],
+                'count': len(blocklist) if blocklist else 0
+            },
+            'timestamp': datetime.now().isoformat()
+        })
+
+    except Exception as e:
+        logger.exception("Error getting filter config")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
+
+@channels_bp.route('/filter-config', methods=['PUT'])
+def update_filter_config():
+    """
+    Update channel filter configuration.
+
+    Expects JSON body with:
+    - mode: "none" | "allowlist" | "blocklist"
+    - allowlist: list of channel IDs (when mode is "allowlist")
+    - blocklist: list of channel IDs (when mode is "blocklist")
+
+    Returns:
+        JSON response with success status
+    """
+    try:
+        if not request.is_json:
+            return jsonify({
+                'success': False,
+                'error': 'Request must be JSON'
+            }), 400
+
+        data = request.get_json()
+        mode = data.get('mode', 'none')
+        allowlist = data.get('allowlist', [])
+        blocklist = data.get('blocklist', [])
+
+        # Validate mode
+        if mode not in ['none', 'allowlist', 'blocklist']:
+            return jsonify({
+                'success': False,
+                'error': 'mode must be one of: none, allowlist, blocklist'
+            }), 400
+
+        # Validate lists
+        if not isinstance(allowlist, list):
+            return jsonify({
+                'success': False,
+                'error': 'allowlist must be a list'
+            }), 400
+
+        if not isinstance(blocklist, list):
+            return jsonify({
+                'success': False,
+                'error': 'blocklist must be a list'
+            }), 400
+
+        from config_manager import ConfigManager
+
+        config_manager = ConfigManager()
+
+        # Prepare update based on mode
+        update_data = {
+            'channel_filter_mode': mode
+        }
+
+        if mode == 'allowlist':
+            update_data['channel_allowlist'] = allowlist if allowlist else None
+            update_data['channel_blocklist'] = None
+        elif mode == 'blocklist':
+            update_data['channel_blocklist'] = blocklist if blocklist else None
+            update_data['channel_allowlist'] = None
+        else:  # mode == 'none'
+            update_data['channel_allowlist'] = None
+            update_data['channel_blocklist'] = None
+
+        result = config_manager.update_config(update_data)
+
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'message': 'Channel filter configuration updated successfully',
+                'filter_mode': mode,
+                'allowlist_count': len(allowlist) if mode == 'allowlist' and allowlist else 0,
+                'blocklist_count': len(blocklist) if mode == 'blocklist' and blocklist else 0,
+                'timestamp': datetime.now().isoformat()
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'errors': result['errors'],
+                'timestamp': datetime.now().isoformat()
+            }), 400
+
+    except Exception as e:
+        logger.exception("Error updating filter config")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
+
 @channels_bp.route('/search', methods=['GET'])
 def search_channels():
     """

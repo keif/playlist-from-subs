@@ -24,16 +24,22 @@ class ConfigSchema:
         "lookback_hours": 24,
         "max_videos": 50,
         "skip_live_content": True,
+        "channel_filter_mode": "none",
+        "channel_allowlist": None,
+        "channel_blocklist": None,
     }
     
     # Required configuration keys
     OPTIONAL_KEYS = {
         "playlist_id",
-        "playlist_name", 
+        "playlist_name",
         "playlist_visibility",
         "min_duration_seconds",
         "lookback_hours",
-        "channel_whitelist",
+        "channel_whitelist",  # Legacy - kept for backward compatibility
+        "channel_filter_mode",
+        "channel_allowlist",
+        "channel_blocklist",
         "max_videos",
         "skip_live_content",
     }
@@ -41,6 +47,7 @@ class ConfigSchema:
     # Valid values for specific configuration keys
     VALID_VALUES = {
         "playlist_visibility": {"private", "unlisted", "public"},
+        "channel_filter_mode": {"none", "allowlist", "blocklist"},
     }
     
     @classmethod
@@ -60,13 +67,39 @@ class ConfigSchema:
         # Apply defaults for missing values
         validated_config = cls.DEFAULTS.copy()
         validated_config.update(config)
-        
+
+        # Migrate legacy whitelist to allowlist if needed
+        validated_config = cls._migrate_legacy_whitelist(validated_config)
+
         # Validate specific fields
         cls._validate_playlist_visibility(validated_config.get("playlist_visibility"))
+        cls._validate_channel_filter_mode(validated_config.get("channel_filter_mode"))
+        cls._validate_channel_lists(validated_config)
         cls._validate_numeric_fields(validated_config)
-        
+
         return validated_config
     
+    @classmethod
+    def _migrate_legacy_whitelist(cls, config: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Migrate legacy channel_whitelist to new allowlist/blocklist system.
+
+        If channel_whitelist exists and new fields are not set, migrate to allowlist mode.
+        """
+        # If new system is already configured, skip migration
+        if config.get("channel_filter_mode") != "none" or config.get("channel_allowlist") or config.get("channel_blocklist"):
+            return config
+
+        # Check for legacy whitelist
+        legacy_whitelist = config.get("channel_whitelist")
+        if legacy_whitelist:
+            # Migrate to allowlist mode
+            config["channel_filter_mode"] = "allowlist"
+            config["channel_allowlist"] = list(legacy_whitelist) if isinstance(legacy_whitelist, set) else legacy_whitelist
+            # Keep legacy field for backward compatibility
+
+        return config
+
     @classmethod
     def _validate_playlist_visibility(cls, visibility: str) -> None:
         """Validate playlist visibility setting."""
@@ -76,6 +109,49 @@ class ConfigSchema:
                 f"Invalid playlist_visibility: {visibility}. "
                 f"Must be one of: {', '.join(valid_values)}"
             )
+
+    @classmethod
+    def _validate_channel_filter_mode(cls, mode: str) -> None:
+        """Validate channel filter mode setting."""
+        valid_values = cls.VALID_VALUES["channel_filter_mode"]
+        if mode not in valid_values:
+            raise ValueError(
+                f"Invalid channel_filter_mode: {mode}. "
+                f"Must be one of: {', '.join(valid_values)}"
+            )
+
+    @classmethod
+    def _validate_channel_lists(cls, config: Dict[str, Any]) -> None:
+        """Validate channel allowlist and blocklist."""
+        mode = config.get("channel_filter_mode", "none")
+        allowlist = config.get("channel_allowlist")
+        blocklist = config.get("channel_blocklist")
+
+        # Validate list types
+        if allowlist is not None and not isinstance(allowlist, (list, set)):
+            raise ValueError("channel_allowlist must be a list or set of channel IDs")
+
+        if blocklist is not None and not isinstance(blocklist, (list, set)):
+            raise ValueError("channel_blocklist must be a list or set of channel IDs")
+
+        # Check for conflicting configuration
+        if allowlist and blocklist:
+            # Find channels in both lists
+            allowlist_set = set(allowlist) if allowlist else set()
+            blocklist_set = set(blocklist) if blocklist else set()
+            conflicts = allowlist_set & blocklist_set
+
+            if conflicts:
+                raise ValueError(
+                    f"Channels cannot be in both allowlist and blocklist: {conflicts}"
+                )
+
+        # Warn if lists are set but mode doesn't match
+        if mode == "allowlist" and blocklist:
+            raise ValueError("Cannot use blocklist when filter mode is 'allowlist'")
+
+        if mode == "blocklist" and allowlist:
+            raise ValueError("Cannot use allowlist when filter mode is 'blocklist'")
     
     @classmethod
     def _validate_numeric_fields(cls, config: Dict[str, Any]) -> None:
@@ -115,9 +191,22 @@ class ConfigSchema:
             f"  Max Videos: {config.get('max_videos', 50)}",
             f"  Skip Live: {config.get('skip_live_content', True)}",
         ]
-        
-        if config.get('channel_whitelist'):
+
+        # Channel filtering summary
+        filter_mode = config.get('channel_filter_mode', 'none')
+        if filter_mode == 'allowlist':
+            allowlist = config.get('channel_allowlist', [])
+            count = len(allowlist) if allowlist else 0
+            summary_lines.append(f"  Channel Filter: Allowlist ({count} channels)")
+        elif filter_mode == 'blocklist':
+            blocklist = config.get('channel_blocklist', [])
+            count = len(blocklist) if blocklist else 0
+            summary_lines.append(f"  Channel Filter: Blocklist ({count} channels)")
+        elif config.get('channel_whitelist'):
+            # Legacy whitelist
             whitelist_count = len(config['channel_whitelist'])
-            summary_lines.append(f"  Channel Whitelist: {whitelist_count} channels")
-        
+            summary_lines.append(f"  Channel Filter: Legacy Whitelist ({whitelist_count} channels)")
+        else:
+            summary_lines.append(f"  Channel Filter: None (all channels)")
+
         return "\n".join(summary_lines)
