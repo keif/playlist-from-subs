@@ -100,8 +100,9 @@ class PlaylistDashboard {
 
     updateUIForBackendMode() {
         const loadButton = document.getElementById('load-sample');
-        loadButton.textContent = '🔄 Load from API';
+        loadButton.innerHTML = '<i data-lucide="rotate-cw" style="width: 16px; height: 16px;"></i> Load from API';
         loadButton.title = 'Load playlist data from the backend server';
+        lucide.createIcons();
         
         // Add refresh button
         this.addRefreshButton();
@@ -134,8 +135,9 @@ class PlaylistDashboard {
         const refreshButton = document.createElement('button');
         refreshButton.id = 'refresh-playlist';
         refreshButton.className = 'button-secondary';
-        refreshButton.textContent = '🔄 Refresh Playlist';
+        refreshButton.innerHTML = '<i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i> Refresh Playlist';
         refreshButton.title = 'Generate fresh playlist data using the CLI tool';
+        lucide.createIcons();
         
         refreshButton.addEventListener('click', () => {
             this.refreshPlaylist();
@@ -208,7 +210,8 @@ class PlaylistDashboard {
             const refreshButton = document.getElementById('refresh-playlist');
             if (refreshButton) {
                 refreshButton.disabled = false;
-                refreshButton.textContent = '🔄 Refresh Playlist';
+                refreshButton.innerHTML = '<i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i> Refresh Playlist';
+                lucide.createIcons();
             }
         }
     }

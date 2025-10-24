@@ -5,23 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube Playlist Dashboard</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
     <div class="container">
         <header class="header">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <h1>🎥 YouTube Playlist Dashboard</h1>
+                    <h1><i data-lucide="video" style="vertical-align: -0.125em;"></i> YouTube Playlist Dashboard</h1>
                     <p class="subtitle">Preview and manage your automated playlist</p>
                 </div>
-                <a href="config.html" style="padding: 12px 24px; background: #e74c3c; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">⚙️ Settings</a>
+                <a href="config.html" style="padding: 12px 24px; background: #e74c3c; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;">
+                    <i data-lucide="settings" style="width: 18px; height: 18px;"></i> Settings
+                </a>
             </div>
         </header>
 
         <div class="controls">
             <div class="file-input-section">
                 <label for="file-input" class="file-input-label">
-                    📁 Load Playlist JSON
+                    <i data-lucide="folder-open" style="width: 18px; height: 18px; vertical-align: -0.125em;"></i> Load Playlist JSON
                 </label>
                 <input type="file" id="file-input" accept=".json" class="file-input">
                 <span class="file-info">or drag & drop a JSON file anywhere</span>
@@ -47,7 +50,7 @@
 
         <div class="drop-zone" id="drop-zone">
             <div class="drop-zone-content">
-                <div class="drop-icon">📄</div>
+                <div class="drop-icon"><i data-lucide="file-json" style="width: 64px; height: 64px;"></i></div>
                 <p>Drop your playlist.json file here</p>
                 <p class="drop-hint">or click "Load Playlist JSON" above</p>
             </div>
@@ -66,11 +69,15 @@
         </div>
 
         <div class="error-message" id="error-message" style="display: none;">
-            <span class="error-icon">⚠️</span>
+            <span class="error-icon"><i data-lucide="alert-triangle" style="width: 20px; height: 20px;"></i></span>
             <span id="error-text"></span>
         </div>
     </div>
 
     <script src="script.js"></script>
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
 </body>
 </html>

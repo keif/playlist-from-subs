@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Configuration - YouTube Playlist Dashboard</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         .config-container {
             max-width: 900px;
@@ -227,9 +228,11 @@
 </head>
 <body>
     <div class="config-container">
-        <a href="index.html" class="back-link">← Back to Dashboard</a>
+        <a href="index.html" class="back-link" style="display: inline-flex; align-items: center; gap: 6px;">
+            <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i> Back to Dashboard
+        </a>
 
-        <h1>⚙️ Configuration</h1>
+        <h1><i data-lucide="settings" style="vertical-align: -0.125em;"></i> Configuration</h1>
 
         <div id="message" class="message"></div>
 
@@ -320,12 +323,22 @@
 
         <!-- Actions -->
         <div class="button-group">
-            <button class="btn btn-primary" id="saveBtn">💾 Save Configuration</button>
-            <button class="btn btn-secondary" id="previewBtn">👁️ Preview Changes</button>
-            <button class="btn btn-outline" id="resetBtn">🔄 Reset to Defaults</button>
+            <button class="btn btn-primary" id="saveBtn" style="display: inline-flex; align-items: center; gap: 8px;">
+                <i data-lucide="save" style="width: 18px; height: 18px;"></i> Save Configuration
+            </button>
+            <button class="btn btn-secondary" id="previewBtn" style="display: inline-flex; align-items: center; gap: 8px;">
+                <i data-lucide="eye" style="width: 18px; height: 18px;"></i> Preview Changes
+            </button>
+            <button class="btn btn-outline" id="resetBtn" style="display: inline-flex; align-items: center; gap: 8px;">
+                <i data-lucide="rotate-ccw" style="width: 18px; height: 18px;"></i> Reset to Defaults
+            </button>
         </div>
     </div>
 
     <script src="config.js"></script>
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
 </body>
 </html>
