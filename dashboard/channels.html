@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Channel Management - YouTube Playlist Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .channels-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #e74c3c;
+            text-decoration: none;
+            font-weight: 500;
+            transition: opacity 0.2s;
+        }
+
+        .back-link:hover {
+            opacity: 0.7;
+        }
+
+        .page-title {
+            font-size: 28px;
+            color: #333;
+            margin: 0;
+        }
+
+        .filter-mode-section {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .filter-mode-section h2 {
+            margin-top: 0;
+            color: #333;
+            font-size: 20px;
+            border-bottom: 2px solid #e74c3c;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .mode-card {
+            flex: 1;
+            min-width: 200px;
+            padding: 20px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+        }
+
+        .mode-card:hover {
+            border-color: #e74c3c;
+            background: #fff5f5;
+        }
+
+        .mode-card.active {
+            border-color: #e74c3c;
+            background: #ffe6e6;
+        }
+
+        .mode-card input[type="radio"] {
+            margin-right: 8px;
+        }
+
+        .mode-card-title {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .mode-card-description {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .search-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .search-input-wrapper {
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 12px 12px 40px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+        }
+
+        .channels-section {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .channels-section h3 {
+            margin-top: 0;
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 16px;
+        }
+
+        .channel-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .channel-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .channel-item:last-child {
+            border-bottom: none;
+        }
+
+        .channel-item:hover {
+            background: #f8f8f8;
+        }
+
+        .channel-item.selected {
+            background: #ffe6e6;
+        }
+
+        .channel-checkbox {
+            margin-right: 12px;
+            cursor: pointer;
+        }
+
+        .channel-info {
+            flex: 1;
+        }
+
+        .channel-name {
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .channel-id {
+            font-size: 12px;
+            color: #999;
+            font-family: monospace;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .loading-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+
+        .bulk-actions {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .bulk-action-btn {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .bulk-action-btn:hover {
+            background: #f0f0f0;
+        }
+
+        .actions-section {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #c0392b;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+
+        .btn-secondary:hover {
+            background: #f0f0f0;
+        }
+
+        .status-message {
+            padding: 12px 20px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .filter-info {
+            background: #f8f9fa;
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .filter-info strong {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="channels-container">
+        <div class="header-section">
+            <a href="config.html" class="back-link">
+                <i data-lucide="arrow-left"></i>
+                Back to Configuration
+            </a>
+        </div>
+
+        <h1 class="page-title">Channel Management</h1>
+
+        <div id="statusMessage" class="status-message"></div>
+
+        <!-- Filter Mode Selection -->
+        <div class="filter-mode-section">
+            <h2>Filter Mode</h2>
+            <div class="mode-selector">
+                <label class="mode-card" id="modeNone">
+                    <input type="radio" name="filterMode" value="none" checked>
+                    <div class="mode-card-title">No Filter</div>
+                    <div class="mode-card-description">Include videos from all subscribed channels</div>
+                </label>
+                <label class="mode-card" id="modeAllowlist">
+                    <input type="radio" name="filterMode" value="allowlist">
+                    <div class="mode-card-title">Allowlist</div>
+                    <div class="mode-card-description">Only include videos from selected channels</div>
+                </label>
+                <label class="mode-card" id="modeBlocklist">
+                    <input type="radio" name="filterMode" value="blocklist">
+                    <div class="mode-card-title">Blocklist</div>
+                    <div class="mode-card-description">Exclude videos from selected channels</div>
+                </label>
+            </div>
+        </div>
+
+        <!-- Search -->
+        <div class="search-section" id="searchSection" style="display: none;">
+            <div class="search-input-wrapper">
+                <i data-lucide="search" class="search-icon"></i>
+                <input type="text" id="searchInput" class="search-input" placeholder="Search channels by name or ID...">
+            </div>
+        </div>
+
+        <!-- Channel Selection -->
+        <div class="channels-section" id="channelsSection" style="display: none;">
+            <h3 id="channelListTitle">Select Channels</h3>
+            <div class="filter-info" id="filterInfo"></div>
+            <div class="bulk-actions">
+                <button class="bulk-action-btn" id="selectAllBtn">Select All</button>
+                <button class="bulk-action-btn" id="deselectAllBtn">Deselect All</button>
+            </div>
+            <div class="channel-list" id="channelList">
+                <div class="loading-state">
+                    <p>Loading channels...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="actions-section">
+            <button class="btn btn-secondary" id="cancelBtn">
+                <i data-lucide="x"></i>
+                Cancel
+            </button>
+            <button class="btn btn-primary" id="saveBtn">
+                <i data-lucide="save"></i>
+                Save Changes
+            </button>
+        </div>
+    </div>
+
+    <script src="channels.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
