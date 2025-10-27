@@ -8,19 +8,22 @@ Automatically sync your latest YouTube subscription uploads into a custom playli
 
 ## Features
 
+- **Web Dashboard Interface** - Modern UI for managing playlists, configuration, and channel filtering
 - **Quota-optimized API usage** - Batched operations reduce quota consumption by 95%+
 - **Automated quota tracking** - Real-time API call monitoring with detailed usage analysis
 - **Intelligent duplicate detection** - Pre-insertion caching prevents wasted API calls
 - **Flexible video filtering**:
   - Minimum duration requirements (skip shorts)
   - Live content filtering (livestreams/premieres)
-  - Channel whitelist support
+  - Channel allowlist/blocklist support (three modes: none, allowlist, blocklist)
   - Custom filtering rules
+- **Channel Management UI** - Visual interface for managing channel filters with real-time search
 - **Robust error handling** - Retry logic and graceful degradation
-- **Multiple interfaces** - Command-line tool and shell scripts
+- **Multiple interfaces** - Web dashboard, command-line tool, and shell scripts
 - **Comprehensive reporting** - CSV reports with detailed metadata
 - **Automated scheduling** - Cron-friendly design with proper logging
 - **Dynamic quota management** - Centralized cost configuration with intelligent fallbacks
+- **Configuration Management** - JSON-based config with web UI and precedence system
 
 ---
 
@@ -120,7 +123,24 @@ The codebase is organized as a modular Python package:
 
 ## Usage
 
-### Basic Usage
+### Web Dashboard (Recommended)
+
+The easiest way to use yt-sub-playlist is through the web dashboard:
+
+```bash
+# Start the dashboard server
+cd dashboard/backend && python app.py
+
+# Open in your browser
+# http://localhost:5001
+```
+
+**Dashboard Features:**
+- **Main Dashboard** (`/`) - View playlist statistics, quota usage, and manage playlists
+- **Settings** (`/config.html`) - Configure all options with visual controls and validation
+- **Channel Manager** (`/channels.html`) - Manage channel allowlist/blocklist with search and filtering
+
+### Command-Line Interface
 
 ```bash
 # Normal run - adds new videos to playlist
@@ -229,6 +249,75 @@ Automatically created when using the dashboard Settings page. Example:
 ```
 
 **Note**: Values in `.env` take precedence over `config.json`. This allows you to override dashboard settings when needed.
+
+---
+
+## Channel Filtering
+
+Control which channels contribute videos to your playlist using three mutually exclusive modes:
+
+### Filter Modes
+
+**1. None (Default)**
+- All subscribed channels are included
+- No filtering applied
+
+**2. Allowlist Mode**
+- Only channels in the allowlist contribute videos
+- All other channels are excluded
+- Useful when you want content from specific creators only
+
+**3. Blocklist Mode**
+- All channels except those in the blocklist contribute videos
+- Useful for excluding specific channels while including everyone else
+
+### Managing Channel Filters
+
+**Via Web Dashboard (Recommended):**
+
+1. Start the dashboard: `cd dashboard/backend && python app.py`
+2. Navigate to Settings → Channel Filtering → "Manage Channels"
+3. Select your filter mode (none/allowlist/blocklist)
+4. Search and select channels
+5. Save configuration
+
+**Via config.json:**
+
+```json
+{
+  "channel_filter_mode": "allowlist",
+  "channel_allowlist": ["UCxxxxxx1", "UCxxxxxx2"],
+  "channel_blocklist": null
+}
+```
+
+**Via Environment Variables:**
+
+```bash
+# Allowlist mode
+CHANNEL_FILTER_MODE=allowlist
+CHANNEL_ALLOWLIST=UCxxxxxx1,UCxxxxxx2
+
+# Blocklist mode
+CHANNEL_FILTER_MODE=blocklist
+CHANNEL_BLOCKLIST=UCxxxxxx3,UCxxxxxx4
+```
+
+### Migration from Whitelist
+
+The legacy `channel_whitelist` configuration is automatically migrated to `channel_allowlist` when using the new filter system. Your existing whitelist will continue to work seamlessly.
+
+### Use Cases
+
+**Allowlist Examples:**
+- Create a playlist from your top 5 favorite channels
+- Focus on educational content creators only
+- Build a curated playlist for a specific topic
+
+**Blocklist Examples:**
+- Exclude gaming channels from your general playlist
+- Remove channels that post too frequently
+- Filter out channels with content you've already watched elsewhere
 
 ---
 
@@ -421,15 +510,25 @@ The modular design supports:
 
 ---
 
-## TODO
+## Project Roadmap
 
-- [ ] Web dashboard interface
-- [ ] Advanced video filtering rules (regex, custom criteria)
-- [ ] Playlist cleanup (remove old videos)
-- [ ] Multiple playlist targets
+### Completed Features ✅
+- [x] Web dashboard interface (Phases 2-4)
+- [x] Channel allowlist/blocklist filtering (Phase 4)
+- [x] Configuration management UI (Phase 3)
+- [x] Real-time quota tracking and monitoring
+- [x] CSV reporting with detailed metadata
+- [x] Automated duplicate detection
+
+### Future Enhancements
+- [ ] Scheduling system with cron integration
+- [ ] Analytics dashboard (playlist growth, channel stats)
+- [ ] Multi-playlist support
+- [ ] Advanced video filtering rules (duration ranges, keyword filters, date ranges)
 - [ ] Notification integrations (email, Slack, Discord)
-- [ ] Performance metrics and quota tracking
+- [ ] Playlist cleanup (remove old videos)
 - [ ] Docker container support
+- [ ] Channel metadata display (thumbnails, subscriber counts)
 
 ---
 
@@ -437,9 +536,32 @@ The modular design supports:
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
+3. Commit your changes using [Conventional Commits](https://www.conventionalcommits.org/) format:
+   ```bash
+   git commit -m 'feat(scope): add amazing feature'
+   ```
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+### Commit Message Format
+
+This project uses Conventional Commits for automatic changelog generation:
+
+- `feat:` - New features
+- `fix:` - Bug fixes
+- `refactor:` - Code refactoring
+- `docs:` - Documentation changes
+- `test:` - Test additions
+- `chore:` - Maintenance tasks
+
+**Examples:**
+```bash
+git commit -m "feat(ui): add dark mode support"
+git commit -m "fix(api): resolve quota tracking issue"
+git commit -m "docs(readme): update installation instructions"
+```
+
+See [docs/RELEASE_PROCESS.md](docs/RELEASE_PROCESS.md) for details on changelog automation.
 
 ---
 
