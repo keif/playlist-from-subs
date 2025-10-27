@@ -11,8 +11,15 @@ const elements = {
     maxDuration: document.getElementById('maxDuration'),
     maxDurationValue: document.getElementById('maxDurationValue'),
     unlimitedDuration: document.getElementById('unlimitedDuration'),
+    dateFilterMode: document.getElementById('dateFilterMode'),
+    lookbackGroup: document.getElementById('lookbackGroup'),
+    daysGroup: document.getElementById('daysGroup'),
+    dateRangeGroup: document.getElementById('dateRangeGroup'),
     lookbackHours: document.getElementById('lookbackHours'),
     lookbackHoursValue: document.getElementById('lookbackHoursValue'),
+    dateFilterDays: document.getElementById('dateFilterDays'),
+    dateFilterStart: document.getElementById('dateFilterStart'),
+    dateFilterEnd: document.getElementById('dateFilterEnd'),
     maxVideos: document.getElementById('maxVideos'),
     maxVideosValue: document.getElementById('maxVideosValue'),
     skipLiveContent: document.getElementById('skipLiveContent'),
@@ -56,10 +63,17 @@ async function loadConfiguration() {
                 elements.unlimitedDuration.checked = true;
             }
 
+            // Date filter mode and values
+            elements.dateFilterMode.value = config.date_filter_mode || 'lookback';
             elements.lookbackHours.value = config.lookback_hours || 24;
+            elements.dateFilterDays.value = config.date_filter_days || 7;
+            elements.dateFilterStart.value = config.date_filter_start || '';
+            elements.dateFilterEnd.value = config.date_filter_end || '';
+
             elements.maxVideos.value = config.max_videos || 50;
             elements.skipLiveContent.checked = config.skip_live_content !== false;
 
+            updateDateFilterVisibility();
             updateRangeDisplays();
         } else {
             showMessage('Failed to load configuration', 'error');
@@ -125,10 +139,32 @@ function setupEventListeners() {
         updateRangeDisplays();
     });
 
+    // Date filter mode dropdown
+    elements.dateFilterMode.addEventListener('change', updateDateFilterVisibility);
+
     // Buttons
     elements.saveBtn.addEventListener('click', saveConfiguration);
     elements.previewBtn.addEventListener('click', previewChanges);
     elements.resetBtn.addEventListener('click', resetToDefaults);
+}
+
+// Update date filter visibility based on selected mode
+function updateDateFilterVisibility() {
+    const mode = elements.dateFilterMode.value;
+
+    // Hide all groups first
+    elements.lookbackGroup.style.display = 'none';
+    elements.daysGroup.style.display = 'none';
+    elements.dateRangeGroup.style.display = 'none';
+
+    // Show the appropriate group
+    if (mode === 'lookback') {
+        elements.lookbackGroup.style.display = 'block';
+    } else if (mode === 'days') {
+        elements.daysGroup.style.display = 'block';
+    } else if (mode === 'date_range') {
+        elements.dateRangeGroup.style.display = 'block';
+    }
 }
 
 // Update range slider displays
@@ -179,6 +215,25 @@ function getConfigFromForm() {
         config.max_duration_seconds = parseInt(elements.maxDuration.value);
     } else {
         config.max_duration_seconds = null;
+    }
+
+    // Date filter settings
+    const dateMode = elements.dateFilterMode.value;
+    config.date_filter_mode = dateMode;
+
+    if (dateMode === 'days') {
+        config.date_filter_days = parseInt(elements.dateFilterDays.value);
+        config.date_filter_start = null;
+        config.date_filter_end = null;
+    } else if (dateMode === 'date_range') {
+        config.date_filter_days = null;
+        config.date_filter_start = elements.dateFilterStart.value || null;
+        config.date_filter_end = elements.dateFilterEnd.value || null;
+    } else {
+        // lookback mode
+        config.date_filter_days = null;
+        config.date_filter_start = null;
+        config.date_filter_end = null;
     }
 
     return config;

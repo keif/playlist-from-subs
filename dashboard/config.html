@@ -285,12 +285,43 @@
             </div>
 
             <div class="form-group">
+                <label for="dateFilterMode">Date Filter Mode</label>
+                <select id="dateFilterMode">
+                    <option value="lookback">Lookback (hours)</option>
+                    <option value="days">Last N Days</option>
+                    <option value="date_range">Date Range</option>
+                </select>
+                <p style="color: #666; font-size: 0.9em; margin-top: 4px;">
+                    Choose how to filter videos by publish date
+                </p>
+            </div>
+
+            <div class="form-group" id="lookbackGroup">
                 <label for="lookbackHours">Lookback Period</label>
                 <input type="range" id="lookbackHours" min="1" max="168" step="1" value="24">
                 <div class="range-display">
                     <span class="range-label">1 hour</span>
                     <span class="range-value" id="lookbackHoursValue">24 hours</span>
                     <span class="range-label">7 days</span>
+                </div>
+            </div>
+
+            <div class="form-group" id="daysGroup" style="display: none;">
+                <label for="dateFilterDays">Number of Days</label>
+                <input type="number" id="dateFilterDays" min="1" max="365" value="7" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                <p style="color: #666; font-size: 0.9em; margin-top: 4px;">
+                    Show videos from the last N days (1-365)
+                </p>
+            </div>
+
+            <div id="dateRangeGroup" style="display: none;">
+                <div class="form-group">
+                    <label for="dateFilterStart">Start Date</label>
+                    <input type="date" id="dateFilterStart" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+                <div class="form-group">
+                    <label for="dateFilterEnd">End Date</label>
+                    <input type="date" id="dateFilterEnd" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
                 </div>
             </div>
 

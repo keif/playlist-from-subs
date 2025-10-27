@@ -5,6 +5,7 @@ This module defines the configuration contract for the application,
 including default values, validation rules, and type definitions.
 """
 
+from datetime import datetime
 from typing import Any, Dict, Optional, Set
 
 
@@ -23,6 +24,10 @@ class ConfigSchema:
         "min_duration_seconds": 60,
         "max_duration_seconds": None,  # None = unlimited
         "lookback_hours": 24,
+        "date_filter_mode": "lookback",  # "lookback", "days", "date_range"
+        "date_filter_days": None,        # Override lookback_hours with "last N days"
+        "date_filter_start": None,       # YYYY-MM-DD
+        "date_filter_end": None,         # YYYY-MM-DD
         "max_videos": 50,
         "skip_live_content": True,
         "channel_filter_mode": "none",
@@ -38,6 +43,10 @@ class ConfigSchema:
         "min_duration_seconds",
         "max_duration_seconds",
         "lookback_hours",
+        "date_filter_mode",
+        "date_filter_days",
+        "date_filter_start",
+        "date_filter_end",
         "channel_whitelist",  # Legacy - kept for backward compatibility
         "channel_filter_mode",
         "channel_allowlist",
@@ -50,6 +59,7 @@ class ConfigSchema:
     VALID_VALUES = {
         "playlist_visibility": {"private", "unlisted", "public"},
         "channel_filter_mode": {"none", "allowlist", "blocklist"},
+        "date_filter_mode": {"lookback", "days", "date_range"},
     }
     
     @classmethod
@@ -78,6 +88,8 @@ class ConfigSchema:
         cls._validate_channel_filter_mode(validated_config.get("channel_filter_mode"))
         cls._validate_channel_lists(validated_config)
         cls._validate_numeric_fields(validated_config)
+        cls._validate_date_filter_mode(validated_config.get("date_filter_mode"))
+        cls._validate_date_filters(validated_config)
 
         return validated_config
     
@@ -183,6 +195,75 @@ class ConfigSchema:
                     f"max_duration_seconds ({max_duration}) cannot be less than "
                     f"min_duration_seconds ({min_duration})"
                 )
+
+    @classmethod
+    def _validate_date_filter_mode(cls, mode: str) -> None:
+        """Validate date filter mode setting."""
+        valid_values = cls.VALID_VALUES["date_filter_mode"]
+        if mode not in valid_values:
+            raise ValueError(
+                f"Invalid date_filter_mode: {mode}. "
+                f"Must be one of: {', '.join(valid_values)}"
+            )
+
+    @classmethod
+    def _validate_date_filters(cls, config: Dict[str, Any]) -> None:
+        """Validate date filter configuration fields."""
+        mode = config.get("date_filter_mode", "lookback")
+
+        # Validate date_filter_days (if set)
+        days = config.get("date_filter_days")
+        if days is not None:
+            if not isinstance(days, int) or days < 1 or days > 365:
+                raise ValueError(
+                    f"Invalid date_filter_days: {days}. "
+                    f"Must be an integer between 1 and 365"
+                )
+
+        # Validate date_filter_start and date_filter_end (if set)
+        start_date_str = config.get("date_filter_start")
+        end_date_str = config.get("date_filter_end")
+
+        if start_date_str is not None:
+            try:
+                start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
+            except ValueError:
+                raise ValueError(
+                    f"Invalid date_filter_start: {start_date_str}. "
+                    f"Must be in YYYY-MM-DD format"
+                )
+
+        if end_date_str is not None:
+            try:
+                end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
+            except ValueError:
+                raise ValueError(
+                    f"Invalid date_filter_end: {end_date_str}. "
+                    f"Must be in YYYY-MM-DD format"
+                )
+
+        # Validate date range logic (start <= end)
+        if start_date_str is not None and end_date_str is not None:
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
+            if end_date < start_date:
+                raise ValueError(
+                    f"date_filter_end ({end_date_str}) cannot be before "
+                    f"date_filter_start ({start_date_str})"
+                )
+
+        # Validate mode-specific requirements
+        if mode == "days" and days is None:
+            raise ValueError(
+                "date_filter_days is required when date_filter_mode is 'days'"
+            )
+
+        if mode == "date_range":
+            if start_date_str is None or end_date_str is None:
+                raise ValueError(
+                    "Both date_filter_start and date_filter_end are required "
+                    "when date_filter_mode is 'date_range'"
+                )
     
     @classmethod
     def get_config_summary(cls, config: Dict[str, Any]) -> str:
@@ -209,8 +290,19 @@ class ConfigSchema:
         else:
             summary_lines.append(f"  Min Duration: {min_dur}s")
 
+        # Date filtering summary
+        date_mode = config.get('date_filter_mode', 'lookback')
+        if date_mode == 'lookback':
+            summary_lines.append(f"  Lookback: {config.get('lookback_hours', 24)} hours")
+        elif date_mode == 'days':
+            days = config.get('date_filter_days', 7)
+            summary_lines.append(f"  Date Filter: Last {days} days")
+        elif date_mode == 'date_range':
+            start = config.get('date_filter_start', 'N/A')
+            end = config.get('date_filter_end', 'N/A')
+            summary_lines.append(f"  Date Filter: {start} to {end}")
+
         summary_lines.extend([
-            f"  Lookback: {config.get('lookback_hours', 24)} hours",
             f"  Max Videos: {config.get('max_videos', 50)}",
             f"  Skip Live: {config.get('skip_live_content', True)}",
         ])

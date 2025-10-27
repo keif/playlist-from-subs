@@ -83,6 +83,7 @@ class VideoFilter:
             "total": 0,
             "too_short": 0,
             "too_long": 0,
+            "outside_date_range": 0,
             "not_whitelisted": 0,  # Legacy stat name
             "not_in_allowlist": 0,
             "in_blocklist": 0,
@@ -199,6 +200,12 @@ class VideoFilter:
                 self.stats["in_blocklist"] += 1
                 return False
 
+        # Check date filter
+        if not self._check_date_filter(video):
+            logger.debug(f"Skipping outside date range: {title}")
+            self.stats["outside_date_range"] += 1
+            return False
+
         # Check live content filter
         if self.config["skip_live_content"]:
             live_broadcast = video.get("live_broadcast", "none")
@@ -208,6 +215,74 @@ class VideoFilter:
                 self.stats["live_content_skipped"] += 1
                 return False
 
+        return True
+
+    def _check_date_filter(self, video: Dict[str, Any]) -> bool:
+        """
+        Check if video passes date filter criteria.
+
+        Args:
+            video: Video data dictionary with published_at field
+
+        Returns:
+            True if video passes date filter, False otherwise
+        """
+        date_mode = self.config.get("date_filter_mode", "lookback")
+
+        # Get video published date (assumed to be in ISO format from YouTube API)
+        published_at_str = video.get("published_at")
+        if not published_at_str:
+            # If no published date, allow video through (shouldn't happen with YouTube API)
+            return True
+
+        # Parse published date
+        try:
+            # Handle both RFC 3339 format (with Z) and ISO format
+            if published_at_str.endswith('Z'):
+                published_at = datetime.strptime(published_at_str, '%Y-%m-%dT%H:%M:%SZ')
+            else:
+                published_at = datetime.fromisoformat(published_at_str.replace('Z', '+00:00'))
+        except ValueError:
+            logger.warning(f"Could not parse published_at date: {published_at_str}")
+            return True
+
+        now = datetime.utcnow()
+
+        if date_mode == "lookback":
+            # Use lookback_hours (default behavior)
+            lookback_hours = self.config.get("lookback_hours", 24)
+            cutoff = now - timedelta(hours=lookback_hours)
+            return published_at >= cutoff
+
+        elif date_mode == "days":
+            # Use date_filter_days (last N days)
+            days = self.config.get("date_filter_days", 7)
+            cutoff = now - timedelta(days=days)
+            # Set cutoff to start of day
+            cutoff = cutoff.replace(hour=0, minute=0, second=0, microsecond=0)
+            return published_at >= cutoff
+
+        elif date_mode == "date_range":
+            # Use date_filter_start and date_filter_end
+            start_str = self.config.get("date_filter_start")
+            end_str = self.config.get("date_filter_end")
+
+            if not start_str or not end_str:
+                # Missing date range, allow through (shouldn't happen with validation)
+                return True
+
+            try:
+                start_date = datetime.strptime(start_str, "%Y-%m-%d")
+                end_date = datetime.strptime(end_str, "%Y-%m-%d")
+                # Set end_date to end of day (23:59:59)
+                end_date = end_date.replace(hour=23, minute=59, second=59)
+
+                return start_date <= published_at <= end_date
+            except ValueError:
+                logger.warning(f"Could not parse date range: {start_str} to {end_str}")
+                return True
+
+        # Unknown mode, allow through
         return True
     
     def _log_filtering_stats(
@@ -229,6 +304,11 @@ class VideoFilter:
             logger.info(f"  Too long (>{max_duration}s): {self.stats['too_long']}")
         else:
             logger.info(f"  Too short (<{min_duration}s): {self.stats['too_short']}")
+
+        # Date filtering stats
+        if self.stats['outside_date_range'] > 0:
+            date_mode = self.config.get("date_filter_mode", "lookback")
+            logger.info(f"  Outside date range ({date_mode} mode): {self.stats['outside_date_range']}")
 
         if filter_mode == "allowlist" and allowlist:
             logger.info(f"  Not in allowlist: {self.stats['not_in_allowlist']}")
