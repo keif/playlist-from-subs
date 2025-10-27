@@ -4,131 +4,56 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## 4.1.0 (2025-10-27)
 
-## [Unreleased]
 
-### Added - Phase 5: Advanced Filtering System ✅
+### Features
 
-Phase 5 introduces three major filtering enhancements that provide granular control over playlist content. All filters use AND logic (videos must pass all enabled filters) and are fully backward compatible.
+* add CSV reporting functionality with --report flag ([#2](https://github.com/yourusername/yt-sub-playlist/issues/2)) ([ea59302](https://github.com/yourusername/yt-sub-playlist/commit/ea593021b3aa34132224acd4d53c0aaca16b602b))
+* add CSV reporting functionality with --report flag ([#3](https://github.com/yourusername/yt-sub-playlist/issues/3)) ([40825b5](https://github.com/yourusername/yt-sub-playlist/commit/40825b5eb6792f29ad036abca955bcba503a5ba8))
+* add CSV reporting functionality with --report flag ([#4](https://github.com/yourusername/yt-sub-playlist/issues/4)) ([80efe1a](https://github.com/yourusername/yt-sub-playlist/commit/80efe1abb511ea0129fd4bad3b2ded431624ea71))
+* add livestream and premiere filtering via SKIP_LIVE_CONTENT ([#1](https://github.com/yourusername/yt-sub-playlist/issues/1)) ([b4b95c6](https://github.com/yourusername/yt-sub-playlist/commit/b4b95c681b75f302df35ad45c47497b06fd995a7))
+* **api:** reuse existing playlists instead of creating duplicates ([d7eaf34](https://github.com/yourusername/yt-sub-playlist/commit/d7eaf34e4b99e84c2d50cc5c68b6958d3fbf0d74))
+* **automation:** implement automatic CSV-to-JSON conversion for dashboard ([5eb6930](https://github.com/yourusername/yt-sub-playlist/commit/5eb69301ed4f3a8a34da7e2eab7b7c2a26ee4230))
+* **config:** implement Phase 3 configuration management system ([6c1ca4f](https://github.com/yourusername/yt-sub-playlist/commit/6c1ca4f2619e173d9ab898872d4112745547a09b))
+* **config:** integrate config.json with CLI - Phase 3.1 ([8c50722](https://github.com/yourusername/yt-sub-playlist/commit/8c50722dffbeaa15e53906aa2d50e60d30c5f87e))
+* **dashboard:** complete Phase 2 with backend integration and data pipeline ([225cd28](https://github.com/yourusername/yt-sub-playlist/commit/225cd287a2abd75424b58b6e75ab7ba9ff843d6b))
+* **dashboard:** implement static playlist preview (Phase 1) ([bfbd5dd](https://github.com/yourusername/yt-sub-playlist/commit/bfbd5ddc115ea1dd738e32643b785b2067df1a9a))
+* enhance quota error handling and early termination support ([0d4951d](https://github.com/yourusername/yt-sub-playlist/commit/0d4951d03ab8ebaad61233d27295ba2901f316e3))
+* **filtering:** add date range filter with three modes (lookback/days/date_range) ([a09aea9](https://github.com/yourusername/yt-sub-playlist/commit/a09aea92d2476849a1dfd86f6a91275590df40e9))
+* **filtering:** add duration range filter with max duration ([8c99333](https://github.com/yourusername/yt-sub-playlist/commit/8c9933311e1be1d681747901fb27369a243ae0c6))
+* **filtering:** implement channel allowlist/blocklist system - Phase 4.1 ([e57c287](https://github.com/yourusername/yt-sub-playlist/commit/e57c287186e0be20835dc41fd4c75d61d8688d3d))
+* **filtering:** implement Phase 5 advanced filtering system ([5d99c00](https://github.com/yourusername/yt-sub-playlist/commit/5d99c004caaba74332c0dbcbe9c0a3e271c4f53b))
+* improved video search ([bdf905f](https://github.com/yourusername/yt-sub-playlist/commit/bdf905fccc6204bb7137bac9eb59b7139d7699b9))
+* init creation and auth steps ([fa2ce0a](https://github.com/yourusername/yt-sub-playlist/commit/fa2ce0ac5f92f9136535108ec815f84afd53f3cd))
+* quota tester to determine improvements ([2afff5c](https://github.com/yourusername/yt-sub-playlist/commit/2afff5c7772fab6318fc352c1f529fd16e2a29cc))
+* **ui:** implement channel allowlist/blocklist management UI - Phase 4.2 ([6e10443](https://github.com/yourusername/yt-sub-playlist/commit/6e10443eed89694eb1e2b6cc5faa4a825896164b))
 
-#### Phase 5.1 - Duration Range Filter
-- Added `max_duration_seconds` configuration field for upper duration limit
-- Extended backend validation to enforce `max_duration >= min_duration` constraint
-- Implemented "too_long" statistic tracking in video filtering pipeline
-- Built max duration slider UI control (range: 60s - 7200s, 1-minute increments)
-- Added "Unlimited" checkbox for disabling maximum duration limit
-- Updated configuration summary to display duration as range when maximum is set
-- Enhanced filtering statistics logging to show both "too_short" and "too_long" counts
 
-**Use Cases Enabled:**
-- Filter playlists to specific duration ranges (e.g., 5-20 minute videos only)
-- Create "quick consumption" playlists under 10 minutes
-- Build "deep dive" playlists with 30+ minute content only
-- Exclude lengthy content while still filtering shorts
+### Bug Fixes
 
-**Technical Details:**
-- **Files Modified**: `yt_sub_playlist/config/schema.py`, `yt_sub_playlist/core/video_filtering.py`, `dashboard/config.html`, `dashboard/config.js`
-- **Lines Changed**: 106 insertions, 10 deletions
-- **Backward Compatible**: Default value is `null` (unlimited), existing configs unaffected
+* **bash:** we were clearing logs before directory creation ([d137131](https://github.com/yourusername/yt-sub-playlist/commit/d137131097da23ae422de200f46f02c090baccd3))
+* clear logs directory (for now) ([558b742](https://github.com/yourusername/yt-sub-playlist/commit/558b742210f42831e72e022938772aff9fa969df))
+* **report:** auto-create parent directory for CSV export ([15d1ea8](https://github.com/yourusername/yt-sub-playlist/commit/15d1ea8f03ee2ae5e84b0b3be89304e32f64826f))
+* **server:** change backend port from 5000 to 5001 to avoid macOS AirPlay conflict ([939992e](https://github.com/yourusername/yt-sub-playlist/commit/939992e41a52f2f694e02b49b3de7a8ea0a2c7c0))
 
-#### Phase 5.2 - Date Range Filter
-- Added `date_filter_mode` configuration field with three modes: "lookback", "days", "date_range"
-- Added `date_filter_days` field for "last N days" filtering (1-365 days)
-- Added `date_filter_start` and `date_filter_end` fields for specific date ranges (YYYY-MM-DD format)
-- Implemented comprehensive date validation (format checking, range logic, mode-specific requirements)
-- Built date filter UI with mode dropdown and conditional input fields
-- Implemented `_check_date_filter()` method with timezone handling and multiple date formats
-- Added "outside_date_range" statistic tracking
 
-**Date Filter Modes:**
-- **Lookback**: Uses existing `lookback_hours` parameter (hourly precision, backward compatible)
-- **Days**: "Last N days" from start of day (daily granularity, simpler than hours)
-- **Date Range**: Specific start/end dates with date pickers (for events, archives)
+### Code Refactoring
 
-**Use Cases Enabled:**
-- Weekly content roundups with rolling 7-day windows
-- Monthly archives with specific date ranges
-- Event coverage with precise date boundaries
-- Flexible time-based filtering beyond fixed lookback
+* complete migration to modular package structure ([dc4a42c](https://github.com/yourusername/yt-sub-playlist/commit/dc4a42c0e0d685760147c30202a46901fc8c1abe))
+* modularize project into package structure with updated README ([dc0327d](https://github.com/yourusername/yt-sub-playlist/commit/dc0327d93deef5cb8815c2343bcf6f479d9df42a))
+* **ui:** replace emojis with Lucide icon library ([cfe14d1](https://github.com/yourusername/yt-sub-playlist/commit/cfe14d124f73aec2771a8efd0e3ecbfbefe0237f))
 
-**Technical Details:**
-- **Files Modified**: Same 4 files as Phase 5.1 (iterative enhancement)
-- **Lines Changed**: ~233 insertions total
-- **Date Handling**: UTC timezone, RFC 3339 and ISO format support, end-of-day inclusion
-- **Backward Compatible**: Default mode is "lookback", existing `lookback_hours` unchanged
 
-#### Phase 5.3 - Keyword Filter
-- Added `keyword_filter_mode` configuration field with four modes: "none", "include", "exclude", "both"
-- Added `keyword_include` and `keyword_exclude` fields (list of strings)
-- Added `keyword_match_type` field: "any" (OR logic) or "all" (AND logic) for include mode
-- Added `keyword_case_sensitive` field (boolean, default false)
-- Added `keyword_search_description` field (boolean, default false - title only)
-- Implemented comprehensive keyword validation (list types, empty checks, mode requirements)
-- Built keyword filter UI with textareas (one keyword per line) and advanced options panel
-- Implemented `_check_keyword_filter()` method with flexible matching logic
-- Added "keyword_filtered_include" and "keyword_filtered_exclude" statistic tracking
+### Documentation
 
-**Keyword Filter Modes:**
-- **None**: No keyword filtering (default)
-- **Include**: Videos must contain keyword(s) - whitelist approach
-- **Exclude**: Videos must not contain any keywords - blacklist approach
-- **Both**: Must match include AND not match exclude - combined filtering
-
-**Advanced Options:**
-- **Match Type**: "any" (OR) = at least one keyword, "all" (AND) = every keyword
-- **Case Sensitive**: Enable for exact case matching (default: case-insensitive)
-- **Search Description**: Search in video description, not just title (default: title only)
-
-**Use Cases Enabled:**
-- Tutorial-only playlists with include: ["tutorial", "guide", "how to"]
-- Spoiler-free content with exclude: ["spoiler", "ending", "finale"]
-- Specific topics with include: ["python", "tutorial"], match: all
-- Curated content with both: include ["review"], exclude ["spoiler"]
-- Case-sensitive language filtering (e.g., "Python" vs "python")
-- Deep search in descriptions for comprehensive keyword matching
-
-**Technical Details:**
-- **Files Modified**: Same 4 files as Phase 5.1/5.2 (consistent architecture)
-- **Lines Changed**: ~267 insertions
-- **Matching**: Simple substring matching (not regex) for safety and simplicity
-- **Backward Compatible**: Default mode is "none", no filtering applied
-
-#### Phase 5.4 - Documentation & Polish
-- Created comprehensive `docs/PHASE5_DESIGN.md` with complete Phase 5 architecture
-- Updated README with detailed sections for all three filter types:
-  - Duration Filtering (Phase 5.1)
-  - Date Filtering (Phase 5.2 - new)
-  - Keyword Filtering (Phase 5.3 - new)
-  - Filter Execution Order (new section explaining AND logic and pipeline)
-- Added filter combination examples with complete config and expected results
-- Added statistics output examples showing filtering breakdown
-- Updated example configurations throughout documentation
-
-### Phase 5 Summary
-
-**Total Implementation:**
-- **Time**: ~2.5 hours (matched estimates perfectly)
-- **Files Modified**: 4 core files (schema.py, video_filtering.py, config.html, config.js)
-- **Lines Added**: ~600 across all sub-phases
-- **Tests**: 13/13 passing (schema validation + video filtering)
-- **Backward Compatible**: All new fields optional with sensible defaults
-
-**Filter Capabilities:**
-- ✅ Duration: min + max (range support)
-- ✅ Date: 3 modes (lookback/days/date_range)
-- ✅ Keywords: 4 modes (none/include/exclude/both) with flexible matching
-- ✅ Channels: 3 modes (none/allowlist/blocklist) - from Phase 4
-- ✅ Live content: skip/include toggle
-
-**Filter Execution Pipeline:**
-1. Already processed check (cache)
-2. Duration filter (min/max)
-3. Date filter (mode-specific)
-4. Channel filter (allowlist/blocklist)
-5. Keyword filter (include/exclude)
-6. Live content filter
-
-All filters use AND logic - videos must pass every enabled filter. Statistics tracked for each stage to help users tune their filters.
+* add comprehensive documentation for Phase 4 and changelog automation ([0a367f2](https://github.com/yourusername/yt-sub-playlist/commit/0a367f2aac5ccd63779c74303ed95e438ba28b58))
+* add Phase 2 documentation and update .gitignore ([47fd00c](https://github.com/yourusername/yt-sub-playlist/commit/47fd00c7d80bcf4232b542684a055ff786e7932a))
+* add Phase 5.1 duration range filter documentation ([f62883d](https://github.com/yourusername/yt-sub-playlist/commit/f62883d0c62cdb23f05b7ac9536410c31392f72c))
+* clarify autogenerated files in data/playlist_cache and api_call_log.json ([1833502](https://github.com/yourusername/yt-sub-playlist/commit/18335026d014e5fce351d41fb743c141ca9d8060))
+* complete Phase 5 documentation with filtering guide ([33934ee](https://github.com/yourusername/yt-sub-playlist/commit/33934eef2c14b21be448875ce962a6f2e0c0429c))
+* update readme with helper scripts ([d96b6a7](https://github.com/yourusername/yt-sub-playlist/commit/d96b6a7e46fb52fff4bec9ea186b0e4f4545c389))
+* update README with helper scripts and CSV reporting instructions ([#5](https://github.com/yourusername/yt-sub-playlist/issues/5)) ([5e13260](https://github.com/yourusername/yt-sub-playlist/commit/5e1326048688e3d90161a83b15249baf68673db4))
 
 ## [4.0.0] - 2025-10-26
 
