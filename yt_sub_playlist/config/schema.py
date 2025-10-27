@@ -33,6 +33,12 @@ class ConfigSchema:
         "channel_filter_mode": "none",
         "channel_allowlist": None,
         "channel_blocklist": None,
+        "keyword_filter_mode": "none",   # "none", "include", "exclude", "both"
+        "keyword_include": None,         # List of keywords to include
+        "keyword_exclude": None,         # List of keywords to exclude
+        "keyword_match_type": "any",     # "any" or "all"
+        "keyword_case_sensitive": False,
+        "keyword_search_description": False,  # Search in description too
     }
     
     # Required configuration keys
@@ -51,6 +57,12 @@ class ConfigSchema:
         "channel_filter_mode",
         "channel_allowlist",
         "channel_blocklist",
+        "keyword_filter_mode",
+        "keyword_include",
+        "keyword_exclude",
+        "keyword_match_type",
+        "keyword_case_sensitive",
+        "keyword_search_description",
         "max_videos",
         "skip_live_content",
     }
@@ -60,6 +72,8 @@ class ConfigSchema:
         "playlist_visibility": {"private", "unlisted", "public"},
         "channel_filter_mode": {"none", "allowlist", "blocklist"},
         "date_filter_mode": {"lookback", "days", "date_range"},
+        "keyword_filter_mode": {"none", "include", "exclude", "both"},
+        "keyword_match_type": {"any", "all"},
     }
     
     @classmethod
@@ -90,6 +104,9 @@ class ConfigSchema:
         cls._validate_numeric_fields(validated_config)
         cls._validate_date_filter_mode(validated_config.get("date_filter_mode"))
         cls._validate_date_filters(validated_config)
+        cls._validate_keyword_filter_mode(validated_config.get("keyword_filter_mode"))
+        cls._validate_keyword_match_type(validated_config.get("keyword_match_type"))
+        cls._validate_keyword_filters(validated_config)
 
         return validated_config
     
@@ -264,7 +281,84 @@ class ConfigSchema:
                     "Both date_filter_start and date_filter_end are required "
                     "when date_filter_mode is 'date_range'"
                 )
-    
+
+    @classmethod
+    def _validate_keyword_filter_mode(cls, mode: str) -> None:
+        """Validate keyword filter mode setting."""
+        valid_values = cls.VALID_VALUES["keyword_filter_mode"]
+        if mode not in valid_values:
+            raise ValueError(
+                f"Invalid keyword_filter_mode: {mode}. "
+                f"Must be one of: {', '.join(valid_values)}"
+            )
+
+    @classmethod
+    def _validate_keyword_match_type(cls, match_type: str) -> None:
+        """Validate keyword match type setting."""
+        valid_values = cls.VALID_VALUES["keyword_match_type"]
+        if match_type not in valid_values:
+            raise ValueError(
+                f"Invalid keyword_match_type: {match_type}. "
+                f"Must be one of: {', '.join(valid_values)}"
+            )
+
+    @classmethod
+    def _validate_keyword_filters(cls, config: Dict[str, Any]) -> None:
+        """Validate keyword filter configuration fields."""
+        mode = config.get("keyword_filter_mode", "none")
+        include_list = config.get("keyword_include")
+        exclude_list = config.get("keyword_exclude")
+
+        # Validate list types
+        if include_list is not None:
+            if not isinstance(include_list, list):
+                raise ValueError("keyword_include must be a list of strings")
+            # Check all items are strings
+            if not all(isinstance(k, str) for k in include_list):
+                raise ValueError("keyword_include must contain only strings")
+
+        if exclude_list is not None:
+            if not isinstance(exclude_list, list):
+                raise ValueError("keyword_exclude must be a list of strings")
+            # Check all items are strings
+            if not all(isinstance(k, str) for k in exclude_list):
+                raise ValueError("keyword_exclude must contain only strings")
+
+        # Validate boolean fields
+        case_sensitive = config.get("keyword_case_sensitive", False)
+        search_description = config.get("keyword_search_description", False)
+
+        if not isinstance(case_sensitive, bool):
+            raise ValueError("keyword_case_sensitive must be a boolean")
+
+        if not isinstance(search_description, bool):
+            raise ValueError("keyword_search_description must be a boolean")
+
+        # Validate mode-specific requirements
+        if mode == "include" and (not include_list or len(include_list) == 0):
+            raise ValueError(
+                "keyword_include list is required and must not be empty "
+                "when keyword_filter_mode is 'include'"
+            )
+
+        if mode == "exclude" and (not exclude_list or len(exclude_list) == 0):
+            raise ValueError(
+                "keyword_exclude list is required and must not be empty "
+                "when keyword_filter_mode is 'exclude'"
+            )
+
+        if mode == "both":
+            if not include_list or len(include_list) == 0:
+                raise ValueError(
+                    "keyword_include list is required and must not be empty "
+                    "when keyword_filter_mode is 'both'"
+                )
+            if not exclude_list or len(exclude_list) == 0:
+                raise ValueError(
+                    "keyword_exclude list is required and must not be empty "
+                    "when keyword_filter_mode is 'both'"
+                )
+
     @classmethod
     def get_config_summary(cls, config: Dict[str, Any]) -> str:
         """
@@ -323,5 +417,19 @@ class ConfigSchema:
             summary_lines.append(f"  Channel Filter: Legacy Whitelist ({whitelist_count} channels)")
         else:
             summary_lines.append(f"  Channel Filter: None (all channels)")
+
+        # Keyword filtering summary
+        keyword_mode = config.get('keyword_filter_mode', 'none')
+        if keyword_mode != 'none':
+            include_list = config.get('keyword_include', [])
+            exclude_list = config.get('keyword_exclude', [])
+            match_type = config.get('keyword_match_type', 'any')
+
+            if keyword_mode == 'include':
+                summary_lines.append(f"  Keyword Filter: Include ({len(include_list)} keywords, {match_type})")
+            elif keyword_mode == 'exclude':
+                summary_lines.append(f"  Keyword Filter: Exclude ({len(exclude_list)} keywords)")
+            elif keyword_mode == 'both':
+                summary_lines.append(f"  Keyword Filter: Include ({len(include_list)}) + Exclude ({len(exclude_list)})")
 
         return "\n".join(summary_lines)

@@ -84,6 +84,8 @@ class VideoFilter:
             "too_short": 0,
             "too_long": 0,
             "outside_date_range": 0,
+            "keyword_filtered_include": 0,
+            "keyword_filtered_exclude": 0,
             "not_whitelisted": 0,  # Legacy stat name
             "not_in_allowlist": 0,
             "in_blocklist": 0,
@@ -206,6 +208,17 @@ class VideoFilter:
             self.stats["outside_date_range"] += 1
             return False
 
+        # Check keyword filter
+        keyword_result = self._check_keyword_filter(video)
+        if keyword_result == "filtered_include":
+            logger.debug(f"Skipping (not in include keywords): {title}")
+            self.stats["keyword_filtered_include"] += 1
+            return False
+        elif keyword_result == "filtered_exclude":
+            logger.debug(f"Skipping (matches exclude keywords): {title}")
+            self.stats["keyword_filtered_exclude"] += 1
+            return False
+
         # Check live content filter
         if self.config["skip_live_content"]:
             live_broadcast = video.get("live_broadcast", "none")
@@ -284,7 +297,73 @@ class VideoFilter:
 
         # Unknown mode, allow through
         return True
-    
+
+    def _check_keyword_filter(self, video: Dict[str, Any]) -> Optional[str]:
+        """
+        Check if video passes keyword filter criteria.
+
+        Args:
+            video: Video data dictionary with title and description fields
+
+        Returns:
+            None if passes filter
+            "filtered_include" if doesn't match include keywords
+            "filtered_exclude" if matches exclude keywords
+        """
+        mode = self.config.get("keyword_filter_mode", "none")
+
+        if mode == "none":
+            return None
+
+        # Get search fields
+        title = video.get("title", "")
+        description = video.get("description", "")
+        search_description = self.config.get("keyword_search_description", False)
+
+        # Build search text
+        search_text = title
+        if search_description and description:
+            search_text = f"{title} {description}"
+
+        # Handle case sensitivity
+        case_sensitive = self.config.get("keyword_case_sensitive", False)
+        if not case_sensitive:
+            search_text = search_text.lower()
+
+        # Get keyword lists
+        include_list = self.config.get("keyword_include", [])
+        exclude_list = self.config.get("keyword_exclude", [])
+        match_type = self.config.get("keyword_match_type", "any")
+
+        # Check include filter
+        if mode in ["include", "both"]:
+            if not include_list:
+                # No include list, pass through
+                pass
+            else:
+                # Check if any/all keywords match
+                keywords_to_check = [k if case_sensitive else k.lower() for k in include_list]
+
+                if match_type == "any":
+                    # At least one keyword must match
+                    if not any(keyword in search_text for keyword in keywords_to_check):
+                        return "filtered_include"
+                else:  # match_type == "all"
+                    # All keywords must match
+                    if not all(keyword in search_text for keyword in keywords_to_check):
+                        return "filtered_include"
+
+        # Check exclude filter
+        if mode in ["exclude", "both"]:
+            if exclude_list:
+                keywords_to_check = [k if case_sensitive else k.lower() for k in exclude_list]
+
+                # If any exclude keyword matches, filter out
+                if any(keyword in search_text for keyword in keywords_to_check):
+                    return "filtered_exclude"
+
+        return None
+
     def _log_filtering_stats(
         self,
         filter_mode: str,
@@ -309,6 +388,12 @@ class VideoFilter:
         if self.stats['outside_date_range'] > 0:
             date_mode = self.config.get("date_filter_mode", "lookback")
             logger.info(f"  Outside date range ({date_mode} mode): {self.stats['outside_date_range']}")
+
+        # Keyword filtering stats
+        if self.stats['keyword_filtered_include'] > 0:
+            logger.info(f"  Keyword filtered (include): {self.stats['keyword_filtered_include']}")
+        if self.stats['keyword_filtered_exclude'] > 0:
+            logger.info(f"  Keyword filtered (exclude): {self.stats['keyword_filtered_exclude']}")
 
         if filter_mode == "allowlist" and allowlist:
             logger.info(f"  Not in allowlist: {self.stats['not_in_allowlist']}")

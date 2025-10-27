@@ -23,6 +23,15 @@ const elements = {
     maxVideos: document.getElementById('maxVideos'),
     maxVideosValue: document.getElementById('maxVideosValue'),
     skipLiveContent: document.getElementById('skipLiveContent'),
+    keywordFilterMode: document.getElementById('keywordFilterMode'),
+    keywordIncludeGroup: document.getElementById('keywordIncludeGroup'),
+    keywordExcludeGroup: document.getElementById('keywordExcludeGroup'),
+    keywordAdvancedOptions: document.getElementById('keywordAdvancedOptions'),
+    keywordInclude: document.getElementById('keywordInclude'),
+    keywordExclude: document.getElementById('keywordExclude'),
+    keywordMatchType: document.getElementById('keywordMatchType'),
+    keywordCaseSensitive: document.getElementById('keywordCaseSensitive'),
+    keywordSearchDescription: document.getElementById('keywordSearchDescription'),
     saveBtn: document.getElementById('saveBtn'),
     previewBtn: document.getElementById('previewBtn'),
     resetBtn: document.getElementById('resetBtn'),
@@ -73,7 +82,16 @@ async function loadConfiguration() {
             elements.maxVideos.value = config.max_videos || 50;
             elements.skipLiveContent.checked = config.skip_live_content !== false;
 
+            // Keyword filter settings
+            elements.keywordFilterMode.value = config.keyword_filter_mode || 'none';
+            elements.keywordInclude.value = (config.keyword_include || []).join('\n');
+            elements.keywordExclude.value = (config.keyword_exclude || []).join('\n');
+            elements.keywordMatchType.value = config.keyword_match_type || 'any';
+            elements.keywordCaseSensitive.checked = config.keyword_case_sensitive || false;
+            elements.keywordSearchDescription.checked = config.keyword_search_description || false;
+
             updateDateFilterVisibility();
+            updateKeywordFilterVisibility();
             updateRangeDisplays();
         } else {
             showMessage('Failed to load configuration', 'error');
@@ -142,10 +160,35 @@ function setupEventListeners() {
     // Date filter mode dropdown
     elements.dateFilterMode.addEventListener('change', updateDateFilterVisibility);
 
+    // Keyword filter mode dropdown
+    elements.keywordFilterMode.addEventListener('change', updateKeywordFilterVisibility);
+
     // Buttons
     elements.saveBtn.addEventListener('click', saveConfiguration);
     elements.previewBtn.addEventListener('click', previewChanges);
     elements.resetBtn.addEventListener('click', resetToDefaults);
+}
+
+// Update keyword filter visibility based on selected mode
+function updateKeywordFilterVisibility() {
+    const mode = elements.keywordFilterMode.value;
+
+    // Hide all groups first
+    elements.keywordIncludeGroup.style.display = 'none';
+    elements.keywordExcludeGroup.style.display = 'none';
+    elements.keywordAdvancedOptions.style.display = 'none';
+
+    // Show appropriate groups based on mode
+    if (mode === 'include') {
+        elements.keywordIncludeGroup.style.display = 'block';
+        elements.keywordAdvancedOptions.style.display = 'block';
+    } else if (mode === 'exclude') {
+        elements.keywordExcludeGroup.style.display = 'block';
+    } else if (mode === 'both') {
+        elements.keywordIncludeGroup.style.display = 'block';
+        elements.keywordExcludeGroup.style.display = 'block';
+        elements.keywordAdvancedOptions.style.display = 'block';
+    }
 }
 
 // Update date filter visibility based on selected mode
@@ -235,6 +278,20 @@ function getConfigFromForm() {
         config.date_filter_start = null;
         config.date_filter_end = null;
     }
+
+    // Keyword filter settings
+    const keywordMode = elements.keywordFilterMode.value;
+    config.keyword_filter_mode = keywordMode;
+
+    // Parse textarea values (one keyword per line)
+    const includeText = elements.keywordInclude.value.trim();
+    const excludeText = elements.keywordExclude.value.trim();
+
+    config.keyword_include = includeText ? includeText.split('\n').map(k => k.trim()).filter(k => k) : null;
+    config.keyword_exclude = excludeText ? excludeText.split('\n').map(k => k.trim()).filter(k => k) : null;
+    config.keyword_match_type = elements.keywordMatchType.value;
+    config.keyword_case_sensitive = elements.keywordCaseSensitive.checked;
+    config.keyword_search_description = elements.keywordSearchDescription.checked;
 
     return config;
 }

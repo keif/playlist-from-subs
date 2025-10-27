@@ -354,6 +354,69 @@
             </button>
         </div>
 
+        <!-- Keyword Filtering -->
+        <div class="config-section">
+            <h2>Keyword Filtering</h2>
+            <p style="color: #666; margin-bottom: 16px;">
+                Filter videos based on keywords in their title or description.
+            </p>
+
+            <div class="form-group">
+                <label for="keywordFilterMode">Keyword Filter Mode</label>
+                <select id="keywordFilterMode">
+                    <option value="none">None (no keyword filtering)</option>
+                    <option value="include">Include Only (whitelist)</option>
+                    <option value="exclude">Exclude (blacklist)</option>
+                    <option value="both">Include + Exclude (both)</option>
+                </select>
+            </div>
+
+            <div id="keywordIncludeGroup" style="display: none;">
+                <div class="form-group">
+                    <label for="keywordInclude">Include Keywords (one per line)</label>
+                    <textarea id="keywordInclude" rows="4" placeholder="tutorial&#10;guide&#10;how to" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace; resize: vertical;"></textarea>
+                    <p style="color: #666; font-size: 0.9em; margin-top: 4px;">
+                        Videos must contain at least one of these keywords to be included
+                    </p>
+                </div>
+            </div>
+
+            <div id="keywordExcludeGroup" style="display: none;">
+                <div class="form-group">
+                    <label for="keywordExclude">Exclude Keywords (one per line)</label>
+                    <textarea id="keywordExclude" rows="4" placeholder="spoiler&#10;ending&#10;finale" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace; resize: vertical;"></textarea>
+                    <p style="color: #666; font-size: 0.9em; margin-top: 4px;">
+                        Videos containing any of these keywords will be excluded
+                    </p>
+                </div>
+            </div>
+
+            <div id="keywordAdvancedOptions" style="display: none; margin-top: 16px; padding: 16px; background: #f9f9f9; border-radius: 4px;">
+                <h3 style="margin-top: 0; font-size: 1em;">Advanced Options</h3>
+
+                <div class="form-group">
+                    <label for="keywordMatchType">Match Type (for include mode)</label>
+                    <select id="keywordMatchType">
+                        <option value="any">Match ANY keyword (OR)</option>
+                        <option value="all">Match ALL keywords (AND)</option>
+                    </select>
+                    <p style="color: #666; font-size: 0.9em; margin-top: 4px;">
+                        "Any" = video needs one keyword | "All" = video needs every keyword
+                    </p>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="keywordCaseSensitive">
+                    <label for="keywordCaseSensitive" style="font-weight: normal;">Case sensitive matching</label>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="keywordSearchDescription">
+                    <label for="keywordSearchDescription" style="font-weight: normal;">Search in video description (not just title)</label>
+                </div>
+            </div>
+        </div>
+
         <!-- System Stats -->
         <div class="config-section">
             <h2>System Statistics</h2>
