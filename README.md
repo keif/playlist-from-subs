@@ -13,7 +13,7 @@ Automatically sync your latest YouTube subscription uploads into a custom playli
 - **Automated quota tracking** - Real-time API call monitoring with detailed usage analysis
 - **Intelligent duplicate detection** - Pre-insertion caching prevents wasted API calls
 - **Flexible video filtering**:
-  - Minimum duration requirements (skip shorts)
+  - Duration range filtering (minimum and maximum duration support)
   - Live content filtering (livestreams/premieres)
   - Channel allowlist/blocklist support (three modes: none, allowlist, blocklist)
   - Custom filtering rules
@@ -241,10 +241,13 @@ Automatically created when using the dashboard Settings page. Example:
   "playlist_name": "Auto Playlist from Subscriptions",
   "playlist_visibility": "unlisted",
   "min_duration_seconds": 120,
+  "max_duration_seconds": null,
   "lookback_hours": 48,
   "max_videos": 50,
   "skip_live_content": true,
-  "channel_whitelist": null
+  "channel_filter_mode": "none",
+  "channel_allowlist": null,
+  "channel_blocklist": null
 }
 ```
 
@@ -318,6 +321,64 @@ The legacy `channel_whitelist` configuration is automatically migrated to `chann
 - Exclude gaming channels from your general playlist
 - Remove channels that post too frequently
 - Filter out channels with content you've already watched elsewhere
+
+---
+
+## Duration Filtering
+
+Control the length of videos included in your playlist using minimum and maximum duration filters.
+
+### Duration Range
+
+Set both minimum and maximum duration limits to create precisely filtered playlists:
+
+- **Minimum Duration** (`min_duration_seconds`): Skip videos shorter than this (default: 60 seconds)
+- **Maximum Duration** (`max_duration_seconds`): Skip videos longer than this (default: unlimited/null)
+
+### Configuration
+
+**Via Web Dashboard:**
+1. Navigate to Settings page (`http://localhost:5001/config.html`)
+2. Adjust the "Min Duration" slider (range: 1s - 7200s)
+3. Adjust the "Max Duration" slider (range: 60s - 7200s)
+4. Check "Unlimited" for no maximum duration limit
+5. Click "Save Configuration"
+
+**Via config.json:**
+```json
+{
+  "min_duration_seconds": 120,
+  "max_duration_seconds": 1800
+}
+```
+
+Set `max_duration_seconds` to `null` for unlimited maximum duration.
+
+### Use Cases
+
+**Skip Shorts AND Long Videos:**
+- Min: 300s (5 minutes), Max: 1200s (20 minutes)
+- Perfect for focused, mid-length content
+
+**Quick Consumption Playlist:**
+- Min: 60s (1 minute), Max: 600s (10 minutes)
+- Great for quick viewing sessions
+
+**Deep Dive Content Only:**
+- Min: 1800s (30 minutes), Max: null (unlimited)
+- Focus on in-depth tutorials and lectures
+
+**No Lengthy Content:**
+- Min: 60s (1 minute), Max: 900s (15 minutes)
+- Avoid time-consuming videos
+
+### Statistics
+
+The filtering process tracks duration-based exclusions:
+- **too_short**: Videos rejected for being under minimum duration
+- **too_long**: Videos rejected for exceeding maximum duration
+
+These statistics appear in logs and help tune your duration range settings.
 
 ---
 

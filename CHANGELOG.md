@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 5: Advanced Filtering (In Progress)
+
+#### Phase 5.1 - Duration Range Filter
+- Added `max_duration_seconds` configuration field for upper duration limit
+- Extended backend validation to enforce `max_duration >= min_duration` constraint
+- Implemented "too_long" statistic tracking in video filtering pipeline
+- Built max duration slider UI control (range: 60s - 7200s, 1-minute increments)
+- Added "Unlimited" checkbox for disabling maximum duration limit
+- Updated configuration summary to display duration as range when maximum is set
+- Enhanced filtering statistics logging to show both "too_short" and "too_long" counts
+
+**Use Cases Enabled:**
+- Filter playlists to specific duration ranges (e.g., 5-20 minute videos only)
+- Create "quick consumption" playlists under 10 minutes
+- Build "deep dive" playlists with 30+ minute content only
+- Exclude lengthy content while still filtering shorts
+
+**Technical Details:**
+- **Files Modified**: `yt_sub_playlist/config/schema.py`, `yt_sub_playlist/core/video_filtering.py`, `dashboard/config.html`, `dashboard/config.js`
+- **Lines Changed**: 106 insertions, 10 deletions
+- **Backward Compatible**: Default value is `null` (unlimited), existing configs unaffected
+
 ## [4.0.0] - 2025-10-26
 
 ### Added - Phase 4: Channel Allowlist/Blocklist System
