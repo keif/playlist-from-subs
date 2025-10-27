@@ -382,6 +382,282 @@ These statistics appear in logs and help tune your duration range settings.
 
 ---
 
+## Date Filtering
+
+Control which videos are included based on their publish date using flexible date filtering modes.
+
+### Date Filter Modes
+
+Choose from three different date filtering approaches:
+
+**1. Lookback Mode** (default)
+- Uses `lookback_hours` parameter for hourly precision
+- Example: "Last 24 hours", "Last 48 hours"
+- Best for: Frequent updates, recent content focus
+
+**2. Days Mode**
+- Filter by "last N days" with daily granularity
+- Range: 1-365 days
+- Cutoff is start of day (00:00:00)
+- Example: "Last 7 days" includes all videos from 7 days ago at midnight to now
+- Best for: Weekly/monthly playlists, consistent rolling windows
+
+**3. Date Range Mode**
+- Filter by specific start and end dates
+- Date picker interface (YYYY-MM-DD format)
+- End date includes full day (23:59:59)
+- Example: "October 1-27, 2025"
+- Best for: Event coverage, monthly archives, specific time periods
+
+### Configuration
+
+**Via Web Dashboard:**
+1. Navigate to Settings page (`http://localhost:5001/config.html`)
+2. Select "Date Filter Mode" from dropdown
+3. Configure based on selected mode:
+   - **Lookback**: Adjust hours slider (1-168 hours)
+   - **Days**: Enter number of days (1-365)
+   - **Date Range**: Select start and end dates
+4. Click "Save Configuration"
+
+**Via config.json:**
+```json
+{
+  "date_filter_mode": "days",
+  "date_filter_days": 7,
+  "date_filter_start": null,
+  "date_filter_end": null
+}
+```
+
+Or for date range mode:
+```json
+{
+  "date_filter_mode": "date_range",
+  "date_filter_days": null,
+  "date_filter_start": "2025-10-01",
+  "date_filter_end": "2025-10-27"
+}
+```
+
+### Use Cases
+
+**Weekly Content Roundup:**
+- Mode: days
+- Days: 7
+- Result: Rolling 7-day window for weekly playlists
+
+**Monthly Archives:**
+- Mode: date_range
+- Start: 2025-10-01, End: 2025-10-31
+- Result: All October 2025 videos
+
+**Recent Updates Only:**
+- Mode: lookback
+- Hours: 24
+- Result: Videos from last 24 hours (backward compatible)
+
+**Event Coverage:**
+- Mode: date_range
+- Start: 2025-10-15, End: 2025-10-20
+- Result: Videos published during specific event dates
+
+### Statistics
+
+The filtering process tracks date-based exclusions:
+- **outside_date_range**: Videos rejected for being outside the configured date filter
+
+These statistics appear in logs and show which date filter mode is active.
+
+---
+
+## Keyword Filtering
+
+Filter videos based on keywords found in their title or description, with flexible matching options.
+
+### Keyword Filter Modes
+
+Choose from four filtering approaches:
+
+**1. None** (default)
+- No keyword filtering applied
+- All videos pass keyword filter
+
+**2. Include Mode** (whitelist)
+- Videos must contain specific keyword(s)
+- Match type options:
+  - **Any**: Video needs at least one keyword (OR logic)
+  - **All**: Video needs every keyword (AND logic)
+- Example: Include ["tutorial", "guide"] with "any" = videos containing "tutorial" OR "guide"
+
+**3. Exclude Mode** (blacklist)
+- Videos must NOT contain any exclude keywords
+- Always uses OR logic (any match = reject)
+- Example: Exclude ["spoiler", "ending"] = reject videos with "spoiler" OR "ending"
+
+**4. Both Mode** (combined)
+- Must pass include check (with any/all logic)
+- Must NOT match any exclude keywords
+- Example: Include ["review"] + Exclude ["spoiler"] = reviews without spoilers
+
+### Configuration
+
+**Via Web Dashboard:**
+1. Navigate to Settings page (`http://localhost:5001/config.html`)
+2. Select "Keyword Filter Mode" from dropdown
+3. Enter keywords (one per line) in appropriate text area:
+   - **Include Keywords**: For include/both modes
+   - **Exclude Keywords**: For exclude/both modes
+4. Configure advanced options (for include/both modes):
+   - **Match Type**: "any" (OR) or "all" (AND) for include keywords
+   - **Case Sensitive**: Enable for exact case matching
+   - **Search Description**: Enable to search video descriptions (not just titles)
+5. Click "Save Configuration"
+
+**Via config.json:**
+```json
+{
+  "keyword_filter_mode": "include",
+  "keyword_include": ["tutorial", "guide", "how to"],
+  "keyword_exclude": null,
+  "keyword_match_type": "any",
+  "keyword_case_sensitive": false,
+  "keyword_search_description": false
+}
+```
+
+Or for both mode:
+```json
+{
+  "keyword_filter_mode": "both",
+  "keyword_include": ["review", "analysis"],
+  "keyword_exclude": ["spoiler", "clickbait"],
+  "keyword_match_type": "any",
+  "keyword_case_sensitive": false,
+  "keyword_search_description": false
+}
+```
+
+### Use Cases
+
+**Tutorial Content Only:**
+- Mode: include
+- Keywords: ["tutorial", "guide", "how to"]
+- Match: any
+- Result: Only educational/instructional content
+
+**Avoid Spoilers:**
+- Mode: exclude
+- Keywords: ["spoiler", "ending", "finale", "twist"]
+- Result: No spoiler-containing videos
+
+**Specific Topic (Strict):**
+- Mode: include
+- Keywords: ["python", "tutorial"]
+- Match: all
+- Result: Only videos with BOTH "python" AND "tutorial"
+
+**Curated Reviews:**
+- Mode: both
+- Include: ["review", "analysis"]
+- Exclude: ["spoiler", "unboxing"]
+- Result: Reviews and analysis without spoilers or unboxings
+
+**Case-Sensitive Filtering:**
+- Mode: include
+- Keywords: ["Python"]  (capital P)
+- Case Sensitive: enabled
+- Result: Matches "Python" but not "python"
+
+**Deep Search:**
+- Mode: include
+- Keywords: ["machine learning"]
+- Search Description: enabled
+- Result: Finds keyword in title OR description
+
+### Advanced Options
+
+**Match Type** (for include mode):
+- **Any (OR)**: Video needs at least one include keyword
+- **All (AND)**: Video needs every include keyword
+
+**Case Sensitive**:
+- Default: false (case-insensitive matching)
+- When enabled: "Python" ≠ "python"
+
+**Search Description**:
+- Default: false (title only)
+- When enabled: searches both title and description text
+
+### Statistics
+
+The filtering process tracks keyword-based exclusions:
+- **keyword_filtered_include**: Videos rejected for not matching include keywords
+- **keyword_filtered_exclude**: Videos rejected for matching exclude keywords
+
+These statistics appear in logs and help tune your keyword filters.
+
+---
+
+## Filter Execution Order
+
+All filters use AND logic - videos must pass every enabled filter to be included in the playlist.
+
+**Filtering Pipeline:**
+
+1. **Already Processed Check**: Skip videos already in playlist (cache lookup)
+2. **Duration Filter**: Check min/max duration constraints
+3. **Date Filter**: Check publish date against selected mode (lookback/days/date_range)
+4. **Channel Filter**: Check allowlist/blocklist (if enabled)
+5. **Keyword Filter**: Check include/exclude keywords (if enabled)
+6. **Live Content Filter**: Skip livestreams/premieres (if enabled)
+
+**Filter Combination Example:**
+
+```json
+{
+  "min_duration_seconds": 300,
+  "max_duration_seconds": 1200,
+  "date_filter_mode": "days",
+  "date_filter_days": 7,
+  "channel_filter_mode": "allowlist",
+  "channel_allowlist": ["UCxxxxx", "UCyyyyy"],
+  "keyword_filter_mode": "both",
+  "keyword_include": ["tutorial"],
+  "keyword_exclude": ["beginner"],
+  "skip_live_content": true
+}
+```
+
+This configuration creates a playlist with:
+- ✅ Videos between 5-20 minutes long
+- ✅ Published in the last 7 days
+- ✅ From specific whitelisted channels
+- ✅ Containing "tutorial" in title
+- ✅ NOT containing "beginner" in title
+- ✅ No livestreams or premieres
+
+**Result**: Intermediate/advanced tutorials from trusted creators, published recently.
+
+**Statistics Output:**
+
+The filtering process logs statistics for each stage:
+```
+Video filtering stats:
+  Total videos: 50
+  Already processed: 5
+  Too short (<300s): 8
+  Too long (>1200s): 6
+  Outside date range (days mode): 4
+  Not in allowlist: 12
+  Keyword filtered (include): 3
+  Keyword filtered (exclude): 2
+  Live content skipped: 1
+  Passed filters: 9
+```
+
+---
+
 ## Automation
 
 ### Cron Job Setup

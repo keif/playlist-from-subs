@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added - Phase 5: Advanced Filtering (In Progress)
+### Added - Phase 5: Advanced Filtering System ✅
+
+Phase 5 introduces three major filtering enhancements that provide granular control over playlist content. All filters use AND logic (videos must pass all enabled filters) and are fully backward compatible.
 
 #### Phase 5.1 - Duration Range Filter
 - Added `max_duration_seconds` configuration field for upper duration limit
@@ -28,6 +30,105 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Files Modified**: `yt_sub_playlist/config/schema.py`, `yt_sub_playlist/core/video_filtering.py`, `dashboard/config.html`, `dashboard/config.js`
 - **Lines Changed**: 106 insertions, 10 deletions
 - **Backward Compatible**: Default value is `null` (unlimited), existing configs unaffected
+
+#### Phase 5.2 - Date Range Filter
+- Added `date_filter_mode` configuration field with three modes: "lookback", "days", "date_range"
+- Added `date_filter_days` field for "last N days" filtering (1-365 days)
+- Added `date_filter_start` and `date_filter_end` fields for specific date ranges (YYYY-MM-DD format)
+- Implemented comprehensive date validation (format checking, range logic, mode-specific requirements)
+- Built date filter UI with mode dropdown and conditional input fields
+- Implemented `_check_date_filter()` method with timezone handling and multiple date formats
+- Added "outside_date_range" statistic tracking
+
+**Date Filter Modes:**
+- **Lookback**: Uses existing `lookback_hours` parameter (hourly precision, backward compatible)
+- **Days**: "Last N days" from start of day (daily granularity, simpler than hours)
+- **Date Range**: Specific start/end dates with date pickers (for events, archives)
+
+**Use Cases Enabled:**
+- Weekly content roundups with rolling 7-day windows
+- Monthly archives with specific date ranges
+- Event coverage with precise date boundaries
+- Flexible time-based filtering beyond fixed lookback
+
+**Technical Details:**
+- **Files Modified**: Same 4 files as Phase 5.1 (iterative enhancement)
+- **Lines Changed**: ~233 insertions total
+- **Date Handling**: UTC timezone, RFC 3339 and ISO format support, end-of-day inclusion
+- **Backward Compatible**: Default mode is "lookback", existing `lookback_hours` unchanged
+
+#### Phase 5.3 - Keyword Filter
+- Added `keyword_filter_mode` configuration field with four modes: "none", "include", "exclude", "both"
+- Added `keyword_include` and `keyword_exclude` fields (list of strings)
+- Added `keyword_match_type` field: "any" (OR logic) or "all" (AND logic) for include mode
+- Added `keyword_case_sensitive` field (boolean, default false)
+- Added `keyword_search_description` field (boolean, default false - title only)
+- Implemented comprehensive keyword validation (list types, empty checks, mode requirements)
+- Built keyword filter UI with textareas (one keyword per line) and advanced options panel
+- Implemented `_check_keyword_filter()` method with flexible matching logic
+- Added "keyword_filtered_include" and "keyword_filtered_exclude" statistic tracking
+
+**Keyword Filter Modes:**
+- **None**: No keyword filtering (default)
+- **Include**: Videos must contain keyword(s) - whitelist approach
+- **Exclude**: Videos must not contain any keywords - blacklist approach
+- **Both**: Must match include AND not match exclude - combined filtering
+
+**Advanced Options:**
+- **Match Type**: "any" (OR) = at least one keyword, "all" (AND) = every keyword
+- **Case Sensitive**: Enable for exact case matching (default: case-insensitive)
+- **Search Description**: Search in video description, not just title (default: title only)
+
+**Use Cases Enabled:**
+- Tutorial-only playlists with include: ["tutorial", "guide", "how to"]
+- Spoiler-free content with exclude: ["spoiler", "ending", "finale"]
+- Specific topics with include: ["python", "tutorial"], match: all
+- Curated content with both: include ["review"], exclude ["spoiler"]
+- Case-sensitive language filtering (e.g., "Python" vs "python")
+- Deep search in descriptions for comprehensive keyword matching
+
+**Technical Details:**
+- **Files Modified**: Same 4 files as Phase 5.1/5.2 (consistent architecture)
+- **Lines Changed**: ~267 insertions
+- **Matching**: Simple substring matching (not regex) for safety and simplicity
+- **Backward Compatible**: Default mode is "none", no filtering applied
+
+#### Phase 5.4 - Documentation & Polish
+- Created comprehensive `docs/PHASE5_DESIGN.md` with complete Phase 5 architecture
+- Updated README with detailed sections for all three filter types:
+  - Duration Filtering (Phase 5.1)
+  - Date Filtering (Phase 5.2 - new)
+  - Keyword Filtering (Phase 5.3 - new)
+  - Filter Execution Order (new section explaining AND logic and pipeline)
+- Added filter combination examples with complete config and expected results
+- Added statistics output examples showing filtering breakdown
+- Updated example configurations throughout documentation
+
+### Phase 5 Summary
+
+**Total Implementation:**
+- **Time**: ~2.5 hours (matched estimates perfectly)
+- **Files Modified**: 4 core files (schema.py, video_filtering.py, config.html, config.js)
+- **Lines Added**: ~600 across all sub-phases
+- **Tests**: 13/13 passing (schema validation + video filtering)
+- **Backward Compatible**: All new fields optional with sensible defaults
+
+**Filter Capabilities:**
+- ✅ Duration: min + max (range support)
+- ✅ Date: 3 modes (lookback/days/date_range)
+- ✅ Keywords: 4 modes (none/include/exclude/both) with flexible matching
+- ✅ Channels: 3 modes (none/allowlist/blocklist) - from Phase 4
+- ✅ Live content: skip/include toggle
+
+**Filter Execution Pipeline:**
+1. Already processed check (cache)
+2. Duration filter (min/max)
+3. Date filter (mode-specific)
+4. Channel filter (allowlist/blocklist)
+5. Keyword filter (include/exclude)
+6. Live content filter
+
+All filters use AND logic - videos must pass every enabled filter. Statistics tracked for each stage to help users tune their filters.
 
 ## [4.0.0] - 2025-10-26
 
