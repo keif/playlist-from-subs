@@ -21,6 +21,7 @@ class ConfigSchema:
         "playlist_name": "Auto Playlist from Subscriptions",
         "playlist_visibility": "unlisted",
         "min_duration_seconds": 60,
+        "max_duration_seconds": None,  # None = unlimited
         "lookback_hours": 24,
         "max_videos": 50,
         "skip_live_content": True,
@@ -35,6 +36,7 @@ class ConfigSchema:
         "playlist_name",
         "playlist_visibility",
         "min_duration_seconds",
+        "max_duration_seconds",
         "lookback_hours",
         "channel_whitelist",  # Legacy - kept for backward compatibility
         "channel_filter_mode",
@@ -158,10 +160,11 @@ class ConfigSchema:
         """Validate numeric configuration fields."""
         numeric_fields = {
             "min_duration_seconds": (0, 86400),  # 0 seconds to 24 hours
+            "max_duration_seconds": (1, 86400),  # 1 second to 24 hours (None allowed)
             "lookback_hours": (1, 168),          # 1 hour to 7 days
             "max_videos": (1, 200),              # 1 to 200 videos
         }
-        
+
         for field, (min_val, max_val) in numeric_fields.items():
             value = config.get(field)
             if value is not None:
@@ -170,6 +173,16 @@ class ConfigSchema:
                         f"Invalid {field}: {value}. "
                         f"Must be an integer between {min_val} and {max_val}"
                     )
+
+        # Validate duration range logic
+        min_duration = config.get("min_duration_seconds")
+        max_duration = config.get("max_duration_seconds")
+        if min_duration is not None and max_duration is not None:
+            if max_duration < min_duration:
+                raise ValueError(
+                    f"max_duration_seconds ({max_duration}) cannot be less than "
+                    f"min_duration_seconds ({min_duration})"
+                )
     
     @classmethod
     def get_config_summary(cls, config: Dict[str, Any]) -> str:
@@ -186,11 +199,21 @@ class ConfigSchema:
             "Configuration Summary:",
             f"  Playlist: {config.get('playlist_name', 'Auto Playlist from Subscriptions')}",
             f"  Visibility: {config.get('playlist_visibility', 'unlisted')}",
-            f"  Min Duration: {config.get('min_duration_seconds', 60)}s",
+        ]
+
+        # Duration summary
+        min_dur = config.get('min_duration_seconds', 60)
+        max_dur = config.get('max_duration_seconds')
+        if max_dur:
+            summary_lines.append(f"  Duration Range: {min_dur}s - {max_dur}s")
+        else:
+            summary_lines.append(f"  Min Duration: {min_dur}s")
+
+        summary_lines.extend([
             f"  Lookback: {config.get('lookback_hours', 24)} hours",
             f"  Max Videos: {config.get('max_videos', 50)}",
             f"  Skip Live: {config.get('skip_live_content', True)}",
-        ]
+        ])
 
         # Channel filtering summary
         filter_mode = config.get('channel_filter_mode', 'none')

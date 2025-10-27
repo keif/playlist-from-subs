@@ -82,6 +82,7 @@ class VideoFilter:
         return {
             "total": 0,
             "too_short": 0,
+            "too_long": 0,
             "not_whitelisted": 0,  # Legacy stat name
             "not_in_allowlist": 0,
             "in_blocklist": 0,
@@ -110,6 +111,7 @@ class VideoFilter:
 
         filtered = []
         min_duration = self.config["min_duration_seconds"]
+        max_duration = self.config.get("max_duration_seconds")
 
         # Get filter mode and lists from config
         filter_mode = self.config.get("channel_filter_mode", "none")
@@ -122,7 +124,7 @@ class VideoFilter:
             allowlist = channel_whitelist
 
         for video in videos:
-            if not self._should_include_video(video, filter_mode, allowlist, blocklist, min_duration):
+            if not self._should_include_video(video, filter_mode, allowlist, blocklist, min_duration, max_duration):
                 continue
 
             # Video passed all filters
@@ -134,7 +136,7 @@ class VideoFilter:
             channel_title = video["channel_title"]
             logger.info(f"✓ {title} ({duration}s) by {channel_title}")
 
-        self._log_filtering_stats(filter_mode, allowlist, blocklist, min_duration)
+        self._log_filtering_stats(filter_mode, allowlist, blocklist, min_duration, max_duration)
         return filtered
     
     def _should_include_video(
@@ -143,7 +145,8 @@ class VideoFilter:
         filter_mode: str,
         allowlist: Optional[Set[str]],
         blocklist: Optional[Set[str]],
-        min_duration: int
+        min_duration: int,
+        max_duration: Optional[int] = None
     ) -> bool:
         """
         Check if a video should be included based on all filters.
@@ -154,6 +157,7 @@ class VideoFilter:
             allowlist: Set of allowed channel IDs (for allowlist mode)
             blocklist: Set of blocked channel IDs (for blocklist mode)
             min_duration: Minimum duration in seconds
+            max_duration: Maximum duration in seconds (None = unlimited)
 
         Returns:
             True if video passes all filters, False otherwise
@@ -170,10 +174,15 @@ class VideoFilter:
             self.stats["already_processed"] += 1
             return False
 
-        # Check duration filter
+        # Check duration filters
         if duration < min_duration:
             logger.debug(f"Skipping too short ({duration}s): {title}")
             self.stats["too_short"] += 1
+            return False
+
+        if max_duration and duration > max_duration:
+            logger.debug(f"Skipping too long ({duration}s): {title}")
+            self.stats["too_long"] += 1
             return False
 
         # Check channel filtering
@@ -206,13 +215,20 @@ class VideoFilter:
         filter_mode: str,
         allowlist: Optional[Set[str]],
         blocklist: Optional[Set[str]],
-        min_duration: int
+        min_duration: int,
+        max_duration: Optional[int] = None
     ) -> None:
         """Log comprehensive filtering statistics."""
         logger.info(f"Video filtering stats:")
         logger.info(f"  Total videos: {self.stats['total']}")
         logger.info(f"  Already processed: {self.stats['already_processed']}")
-        logger.info(f"  Too short (<{min_duration}s): {self.stats['too_short']}")
+
+        # Duration filtering stats
+        if max_duration:
+            logger.info(f"  Too short (<{min_duration}s): {self.stats['too_short']}")
+            logger.info(f"  Too long (>{max_duration}s): {self.stats['too_long']}")
+        else:
+            logger.info(f"  Too short (<{min_duration}s): {self.stats['too_short']}")
 
         if filter_mode == "allowlist" and allowlist:
             logger.info(f"  Not in allowlist: {self.stats['not_in_allowlist']}")

@@ -8,6 +8,9 @@ const elements = {
     playlistVisibility: document.getElementById('playlistVisibility'),
     minDuration: document.getElementById('minDuration'),
     minDurationValue: document.getElementById('minDurationValue'),
+    maxDuration: document.getElementById('maxDuration'),
+    maxDurationValue: document.getElementById('maxDurationValue'),
+    unlimitedDuration: document.getElementById('unlimitedDuration'),
     lookbackHours: document.getElementById('lookbackHours'),
     lookbackHoursValue: document.getElementById('lookbackHoursValue'),
     maxVideos: document.getElementById('maxVideos'),
@@ -43,6 +46,16 @@ async function loadConfiguration() {
             elements.playlistName.value = config.playlist_name || '';
             elements.playlistVisibility.value = config.playlist_visibility || 'unlisted';
             elements.minDuration.value = config.min_duration_seconds || 60;
+
+            // Max duration handling
+            if (config.max_duration_seconds) {
+                elements.maxDuration.value = config.max_duration_seconds;
+                elements.unlimitedDuration.checked = false;
+            } else {
+                elements.maxDuration.value = 7200; // Set to max
+                elements.unlimitedDuration.checked = true;
+            }
+
             elements.lookbackHours.value = config.lookback_hours || 24;
             elements.maxVideos.value = config.max_videos || 50;
             elements.skipLiveContent.checked = config.skip_live_content !== false;
@@ -102,8 +115,15 @@ async function loadStats() {
 function setupEventListeners() {
     // Range sliders
     elements.minDuration.addEventListener('input', updateRangeDisplays);
+    elements.maxDuration.addEventListener('input', updateRangeDisplays);
     elements.lookbackHours.addEventListener('input', updateRangeDisplays);
     elements.maxVideos.addEventListener('input', updateRangeDisplays);
+
+    // Unlimited duration checkbox
+    elements.unlimitedDuration.addEventListener('change', () => {
+        elements.maxDuration.disabled = elements.unlimitedDuration.checked;
+        updateRangeDisplays();
+    });
 
     // Buttons
     elements.saveBtn.addEventListener('click', saveConfiguration);
@@ -120,6 +140,17 @@ function updateRangeDisplays() {
         : `${minDuration} seconds`;
     elements.minDurationValue.textContent = minDurationText;
 
+    // Max duration
+    if (elements.unlimitedDuration.checked) {
+        elements.maxDurationValue.textContent = 'Unlimited';
+    } else {
+        const maxDuration = parseInt(elements.maxDuration.value);
+        const maxDurationText = maxDuration >= 60
+            ? `${Math.floor(maxDuration / 60)} min ${maxDuration % 60} sec`
+            : `${maxDuration} seconds`;
+        elements.maxDurationValue.textContent = maxDurationText;
+    }
+
     // Lookback hours
     const lookbackHours = parseInt(elements.lookbackHours.value);
     const lookbackText = lookbackHours >= 24
@@ -134,7 +165,7 @@ function updateRangeDisplays() {
 
 // Get current form values as config object
 function getConfigFromForm() {
-    return {
+    const config = {
         playlist_name: elements.playlistName.value,
         playlist_visibility: elements.playlistVisibility.value,
         min_duration_seconds: parseInt(elements.minDuration.value),
@@ -142,6 +173,15 @@ function getConfigFromForm() {
         max_videos: parseInt(elements.maxVideos.value),
         skip_live_content: elements.skipLiveContent.checked
     };
+
+    // Only include max_duration_seconds if not unlimited
+    if (!elements.unlimitedDuration.checked) {
+        config.max_duration_seconds = parseInt(elements.maxDuration.value);
+    } else {
+        config.max_duration_seconds = null;
+    }
+
+    return config;
 }
 
 // Save configuration
