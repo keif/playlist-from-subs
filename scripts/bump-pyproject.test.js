@@ -25,4 +25,24 @@ assert.throws(
   "readVersion throws when [project] version is missing",
 );
 
+// writeVersion throws on missing [project] version
+assert.throws(
+  () => updater.writeVersion(`[tool.x]\nversion = "1.0.0"\n`, "5.0.0"),
+  /version not found/,
+  "writeVersion throws when [project] version is missing",
+);
+
+// regex anchors to [project] even when later tables have version keys
+const PROJECT_LACKS_VERSION = `[project]
+name = "x"
+
+[tool.something]
+version = "9.9.9"
+`;
+assert.throws(
+  () => updater.readVersion(PROJECT_LACKS_VERSION),
+  /version not found/,
+  "readVersion does not match version in [tool.*] when [project] lacks one",
+);
+
 console.log("ok - bump-pyproject updater");
