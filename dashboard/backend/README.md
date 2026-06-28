@@ -23,7 +23,7 @@ uv sync --extra dashboard
 ### 2. Start the Backend Server
 
 ```bash
-python app.py
+uv run python app.py
 ```
 
 The server will start at `http://localhost:5001`
@@ -146,8 +146,8 @@ For production deployment, consider:
 ### Example Production Setup
 
 ```bash
-# Run with gunicorn (add gunicorn to pyproject.toml dashboard extras first)
-uv run gunicorn -w 4 -b 0.0.0.0:5000 app:app
+# Production with gunicorn (uv installs it on demand)
+uv run --with gunicorn gunicorn -w 4 -b 0.0.0.0:5000 app:app
 ```
 
 ## Troubleshooting
@@ -158,7 +158,7 @@ uv run gunicorn -w 4 -b 0.0.0.0:5000 app:app
 - Verify your Python path includes the project root
 
 ### "No recent CSV reports found"
-- Run the CLI tool at least once: `python -m yt_sub_playlist --report reports/test.csv`
+- Run the CLI tool at least once: `uv run python -m yt_sub_playlist --report reports/test.csv`
 - Check that `yt_sub_playlist/reports/` directory exists
 
 ### Frontend can't connect to API

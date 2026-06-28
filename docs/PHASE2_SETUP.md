@@ -15,10 +15,10 @@ uv sync --extra dashboard
 ### 2. Start the Backend Server
 ```bash
 # Option 1: Using the convenience script
-python run.py
+uv run python run.py
 
 # Option 2: Direct Flask run
-python app.py
+uv run python app.py
 ```
 
 ### 3. Open the Dashboard
@@ -72,7 +72,7 @@ open index.html  # macOS
 ## 🧪 Testing the Integration
 
 ### Test Backend Connection
-1. Start backend: `cd dashboard/backend && python run.py`
+1. Start backend: `cd dashboard/backend && uv run python run.py`
 2. Visit: http://localhost:5001/api/status
 3. Should see JSON with `cli_available: true/false`
 
@@ -92,7 +92,7 @@ open index.html  # macOS
 ```bash
 # Make sure you're in the right directory
 cd /path/to/playlist-from-subs/dashboard/backend
-python run.py
+uv run python run.py
 ```
 
 ### Frontend shows static mode despite backend running
@@ -106,7 +106,7 @@ python run.py
 - YouTube API quotas or network issues can cause delays
 
 ### No recent data found
-- Run CLI tool once to generate reports: `python -m yt_sub_playlist --report reports/test.csv`
+- Run CLI tool once to generate reports: `uv run python -m yt_sub_playlist --report reports/test.csv`
 - Check that reports directory exists and has recent files
 
 ## 📁 New File Structure
