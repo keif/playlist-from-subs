@@ -14,11 +14,6 @@ PROJECT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
 # Change to project directory
 cd "$PROJECT_DIR"
 
-# Activate virtual environment if it exists
-if [ -d "venv" ]; then
-    source venv/bin/activate
-fi
-
 echo "Resetting YouTube API authentication..."
 
 # Remove stored token file
@@ -33,7 +28,7 @@ fi
 echo ""
 echo "Testing authentication (this will open your browser)..."
 
-python -c "
+uv run python -c "
 from yt_sub_playlist.auth.oauth import test_authentication
 import sys
 success = test_authentication()
