@@ -32,7 +32,8 @@
   "standard-version": {
     "bumpFiles": [
       { "filename": "package.json", "type": "json" },
-      { "filename": "pyproject.toml", "updater": "scripts/bump-pyproject.js" }
+      { "filename": "pyproject.toml", "updater": "scripts/bump-pyproject.js" },
+      { "filename": "uv.lock", "updater": "scripts/bump-uv-lock.js" }
     ]
   }
 }
