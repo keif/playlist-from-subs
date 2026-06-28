@@ -9,7 +9,7 @@ Your dashboard now has a Python Flask backend that integrates with your existing
 ### 1. Install Dependencies
 ```bash
 # Install all dependencies from project root
-pip install -r requirements.txt
+uv sync --extra dashboard
 ```
 
 ### 2. Start the Backend Server
@@ -120,7 +120,6 @@ dashboard/
 ├── backend/
 │   ├── app.py              # Flask API server
 │   ├── run.py              # Convenience startup script
-│   ├── requirements.txt    # Python dependencies
 │   └── README.md          # Backend documentation
 ├── PHASE2_SETUP.md        # This file
 └── README.md              # Phase 1 documentation
