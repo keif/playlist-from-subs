@@ -47,11 +47,5 @@
   "issueUrlFormat": "https://github.com/yourusername/yt-sub-playlist/issues/{{id}}",
   "userUrlFormat": "https://github.com/{{user}}",
   "releaseCommitMessageFormat": "chore(release): {{currentTag}}",
-  "issuePrefixes": ["#"],
-  "bumpFiles": [
-    {
-      "filename": "package.json",
-      "type": "json"
-    }
-  ]
+  "issuePrefixes": ["#"]
 }
