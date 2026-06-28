@@ -128,7 +128,7 @@ The easiest way to use yt-sub-playlist is through the web dashboard:
 
 ```bash
 # Start the dashboard server
-cd dashboard/backend && python app.py
+cd dashboard/backend && uv run python app.py
 
 # Open in your browser
 # http://localhost:5001
@@ -143,19 +143,19 @@ cd dashboard/backend && python app.py
 
 ```bash
 # Normal run - adds new videos to playlist
-python -m yt_sub_playlist
+uv run python -m yt_sub_playlist
 
 # Dry-run mode (shows what would be added without making changes)
-python -m yt_sub_playlist --dry-run
+uv run python -m yt_sub_playlist --dry-run
 
 # Verbose logging for debugging
-python -m yt_sub_playlist --verbose
+uv run python -m yt_sub_playlist --verbose
 
 # Limit number of videos to process
-python -m yt_sub_playlist --limit 20
+uv run python -m yt_sub_playlist --limit 20
 
 # Generate CSV report
-python -m yt_sub_playlist --report reports/videos_added.csv
+uv run python -m yt_sub_playlist --report reports/videos_added.csv
 ```
 
 ### Helper Scripts
@@ -184,10 +184,10 @@ Generate detailed CSV reports of all processed videos:
 
 ```bash
 # Generate report with video metadata
-python -m yt_sub_playlist --report reports/videos_added.csv
+uv run python -m yt_sub_playlist --report reports/videos_added.csv
 
 # Combine with dry-run to preview what would be processed
-python -m yt_sub_playlist --dry-run --report reports/preview.csv
+uv run python -m yt_sub_playlist --dry-run --report reports/preview.csv
 ```
 
 **CSV Fields**: title, video_id, channel_title, channel_id, published_at, duration_seconds, live_broadcast, added
@@ -198,7 +198,7 @@ python -m yt_sub_playlist --dry-run --report reports/preview.csv
 
 1. **Web Dashboard** (Recommended): Start the dashboard and use the Settings page to manage configuration visually:
    ```bash
-   cd dashboard/backend && python app.py
+   cd dashboard/backend && uv run python app.py
    # Open http://localhost:5001/config.html
    ```
 
@@ -277,7 +277,7 @@ Control which channels contribute videos to your playlist using three mutually e
 
 **Via Web Dashboard (Recommended):**
 
-1. Start the dashboard: `cd dashboard/backend && python app.py`
+1. Start the dashboard: `cd dashboard/backend && uv run python app.py`
 2. Navigate to Settings → Channel Filtering → "Manage Channels"
 3. Select your filter mode (none/allowlist/blocklist)
 4. Search and select channels
@@ -706,7 +706,7 @@ Run the quota simulator to analyze your actual API usage:
 ./yt_sub_playlist/scripts/quota_test.sh
 
 # Or run directly
-python yt_sub_playlist/scripts/quota_simulator.py
+uv run python yt_sub_playlist/scripts/quota_simulator.py
 ```
 
 **Sample output**:
@@ -774,7 +774,7 @@ Every API call is automatically tracked without manual intervention:
 
 ### Quota Analysis Workflow
 
-1. **Run your application**: `python -m yt_sub_playlist`
+1. **Run your application**: `uv run python -m yt_sub_playlist`
 2. **API calls are tracked automatically** - No configuration needed
 3. **Analyze real usage**: `./yt_sub_playlist/scripts/quota_test.sh`
 4. **Optimize based on data** - Focus on high-cost operations
@@ -799,14 +799,14 @@ The following files are automatically generated at runtime and excluded from ver
 ./yt_sub_playlist/scripts/reset-auth.sh
 
 # Test authentication manually
-python -m yt_sub_playlist.auth.oauth
+uv run python -m yt_sub_playlist.auth.oauth
 ```
 
 ### Configuration Problems
 
 ```bash
 # Validate your .env configuration
-python -c "
+uv run python -c "
 from yt_sub_playlist.config.env_loader import load_config
 from yt_sub_playlist.config.schema import ConfigSchema
 config = load_config()
@@ -830,10 +830,10 @@ If you hit quota limits:
 
 ```bash
 # Test core functionality
-python -m pytest tests/
+uv run python -m pytest tests/
 
 # Test specific modules
-python -m pytest tests/test_video_filtering.py -v
+uv run python -m pytest tests/test_video_filtering.py -v
 ```
 
 ### Code Structure
