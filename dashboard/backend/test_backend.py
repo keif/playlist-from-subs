@@ -65,7 +65,7 @@ def main():
     
     # Check dependencies
     if not check_dependencies():
-        print("\n❌ Missing dependencies. Run: pip install -r requirements.txt")
+        print("\n❌ Missing dependencies. Run: uv sync --extra dashboard")
         return False
     
     print("\n📋 Instructions:")

@@ -17,7 +17,7 @@ A Flask REST API that serves your YouTube playlist data and integrates with your
 
 ```bash
 # Install from project root (includes both CLI and dashboard dependencies)
-pip install -r requirements.txt
+uv sync --extra dashboard
 ```
 
 ### 2. Start the Backend Server
@@ -146,11 +146,8 @@ For production deployment, consider:
 ### Example Production Setup
 
 ```bash
-# Install production server
-pip install gunicorn
-
-# Run with gunicorn
-gunicorn -w 4 -b 0.0.0.0:5000 app:app
+# Run with gunicorn (add gunicorn to pyproject.toml dashboard extras first)
+uv run gunicorn -w 4 -b 0.0.0.0:5000 app:app
 ```
 
 ## Troubleshooting
@@ -179,7 +176,6 @@ gunicorn -w 4 -b 0.0.0.0:5000 app:app
 ```
 backend/
 ├── app.py              # Main Flask application
-├── requirements.txt    # Python dependencies
 └── README.md          # This file
 ```
 

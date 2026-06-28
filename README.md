@@ -29,7 +29,7 @@ Automatically sync your latest YouTube subscription uploads into a custom playli
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.11+
 - YouTube Data API v3 access
 - Google Cloud project with:
   - OAuth 2.0 client ID + secret
@@ -39,13 +39,12 @@ Automatically sync your latest YouTube subscription uploads into a custom playli
 
 ## Installation
 
-    ```bash
-    git clone https://github.com/yourusername/yt-sub-playlist.git
-    cd yt-sub-playlist
-    python3 -m venv venv
-    source venv/bin/activate
-    pip install -r requirements.txt
-    ```
+```bash
+git clone https://github.com/yourusername/yt-sub-playlist.git
+cd yt-sub-playlist
+uv sync                       # CLI only
+uv sync --extra dashboard     # CLI + Flask dashboard
+```
 
 ---
 
@@ -64,7 +63,7 @@ Automatically sync your latest YouTube subscription uploads into a custom playli
 
 3. **Run Initial Auth Flow**
    ```bash
-   python -m yt_sub_playlist.auth.oauth
+   uv run python -m yt_sub_playlist.auth.oauth
    ```
    This will open a browser window to authorize your Google account and store `token.json`.
 
