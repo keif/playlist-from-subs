@@ -28,5 +28,11 @@
   "devDependencies": {
     "conventional-changelog-cli": "^4.1.0",
     "standard-version": "^9.5.0"
+  },
+  "standard-version": {
+    "bumpFiles": [
+      { "filename": "package.json", "type": "json" },
+      { "filename": "pyproject.toml", "updater": "scripts/bump-pyproject.js" }
+    ]
   }
 }
