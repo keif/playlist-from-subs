@@ -13,8 +13,8 @@ updates:
           - "google-api-python-client"
       flask:
         patterns:
-          - "Flask*"
-          - "Werkzeug"
+          - "flask*"
+          - "werkzeug"
     commit-message:
       prefix: "chore(deps)"
       include: "scope"
