@@ -37,4 +37,11 @@ write_secret() {
 write_secret CLIENT_SECRETS_B64 client_secrets.json
 write_secret TOKEN_B64 token.json
 
+# The app reads client_secrets.json / token.json as relative paths. The image's
+# WORKDIR is /data, but platforms like GitHub Actions (`uses: docker://...`)
+# override the container's working directory to the runner's checkout. Force
+# cwd to the secrets directory so the CLI's relative reads find the hydrated
+# files regardless of how the container was invoked.
+cd "$DATA_DIR"
+
 exec "$@"

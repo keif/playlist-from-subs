@@ -105,16 +105,26 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - uses: docker://ghcr.io/keif/yt-sub-playlist:<version>
-        env:
-          CLIENT_SECRETS_B64: ${{ secrets.CLIENT_SECRETS_B64 }}
-          TOKEN_B64: ${{ secrets.TOKEN_B64 }}
+      - name: Prepare data dir
+        run: mkdir -p ${{ github.workspace }}/data
+      - name: Run sync
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/data:/data \
+            -e CLIENT_SECRETS_B64="${{ secrets.CLIENT_SECRETS_B64 }}" \
+            -e TOKEN_B64="${{ secrets.TOKEN_B64 }}" \
+            ghcr.io/keif/yt-sub-playlist:<version>
       - name: Round-trip refreshed token
         env: { GH_TOKEN: ${{ secrets.GH_PAT }} }
-        run: gh secret set TOKEN_B64 --body "$(cat /tmp/token.json)" --repo "$GITHUB_REPOSITORY"
+        run: |
+          gh secret set TOKEN_B64 \
+            --body "$(base64 < ${{ github.workspace }}/data/token.json | tr -d '\n')" \
+            --repo "$GITHUB_REPOSITORY"
 ```
 
 Free if the user is OK with running on Microsoft infra. Runbook is explicit about `GH_PAT`.
+
+Note the explicit `docker run` (not `uses: docker://...`) so the workflow controls the volume mount — the refreshed `token.json` needs to land on the runner's filesystem so the round-trip step can read it. The round-trip step re-encodes the binary token as base64 before writing it back to the secret; without that, the next run's entrypoint would fail at `base64 -d`.
 
 ### Path 3: Raw Docker / VPS
 
