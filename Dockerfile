@@ -34,8 +34,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/app/.venv/bin:$PATH"
 
+# Non-root user. UID 1000 is conventional and matches typical desktop bind
+# mounts. Fly volumes are root-owned at creation — see docs/deploy/fly.md
+# for the one-time `fly ssh console` chown step.
+RUN groupadd --system --gid 1000 app \
+    && useradd --system --uid 1000 --gid app --shell /usr/sbin/nologin --home /app app
+
 WORKDIR /app
-COPY --from=builder /app /app
+COPY --from=builder --chown=app:app /app /app
 
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
@@ -43,9 +49,11 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 # /data is where client_secrets.json and token.json live at runtime. Platforms
 # either bind-mount it (raw Docker) or attach a volume (Fly). For ephemeral
 # runs (GitHub Actions) the shim writes the env-var secrets here on startup.
-RUN mkdir -p /data
+RUN mkdir -p /data && chown app:app /data
 WORKDIR /data
 VOLUME ["/data"]
+
+USER app
 
 # ENTRYPOINT bakes in the CLI invocation so `docker run <image> --help` works.
 # Override --entrypoint to launch the dashboard or any other module.

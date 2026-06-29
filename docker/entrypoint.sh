@@ -1,7 +1,15 @@
 #!/bin/sh
-# Hydrate env-var-driven secrets to /data so the Python app can read them.
-# If a file already exists on disk (bind-mounted or persisted-volume case),
-# leave it alone so refreshed tokens survive restarts.
+# Hydrate base64-encoded secrets from env vars to /data so the Python app can
+# read them. If a file already exists on disk (bind-mounted or persisted-volume
+# case), leave it alone so refreshed tokens survive restarts.
+#
+# Base64 is used because `token.json` is actually a binary credentials
+# serialization (not JSON), despite the filename. Raw env vars would corrupt
+# binary content with NUL bytes. `client_secrets.json` is genuine JSON and
+# would survive raw transit, but we base64 both so the contract is consistent.
+#
+# Encode files on the user's laptop with: base64 -w0 < token.json
+# (macOS: `base64 < token.json | tr -d '\n'`)
 
 set -eu
 
@@ -22,11 +30,11 @@ write_secret() {
         return 0
     fi
 
-    printf '%s' "$var_value" > "$file_path"
+    printf '%s' "$var_value" | base64 -d > "$file_path"
     chmod 600 "$file_path"
 }
 
-write_secret CLIENT_SECRETS_JSON client_secrets.json
-write_secret TOKEN_JSON token.json
+write_secret CLIENT_SECRETS_B64 client_secrets.json
+write_secret TOKEN_B64 token.json
 
 exec "$@"
