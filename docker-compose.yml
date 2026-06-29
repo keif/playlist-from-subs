@@ -1,0 +1,43 @@
+# docker-compose.yml — raw Docker / VPS deploy path for yt-sub-playlist.
+#
+# This file is intended to live in the user's deploy checkout (their own
+# fork, or a copy alongside ./data/). It builds the image locally by
+# default. Once the project publishes images to ghcr.io (#13), swap
+# `build: .` for `image: ghcr.io/keif/yt-sub-playlist:<version>` and
+# `docker compose pull` instead of `docker compose build`.
+#
+# Secrets layout: place client_secrets.json and token.json directly under
+# ./data/ before the first run. The Python app reads both files from cwd
+# (which the entrypoint shim forces to /data). The token is refreshed in
+# place on each run, so /data needs to be writable.
+#
+# Scheduling: this service is intentionally one-shot — no `restart` policy.
+# Trigger it from host cron or a systemd timer:
+#   0 6 * * *   cd /srv/yt-sub-playlist && /usr/bin/docker compose run --rm sync >> /var/log/yt-sub-playlist.log 2>&1
+# See docs/deploy/docker.md (#16) for the full runbook.
+
+services:
+  sync:
+    build: .
+    image: yt-sub-playlist:local
+    container_name: yt-sub-playlist-sync
+    volumes:
+      # ./data holds client_secrets.json + token.json + the app's runtime
+      # state (api_call_log.json, playlist_cache/, processed_videos.json).
+      # Treat this directory as sensitive: it contains a live OAuth refresh
+      # token. Restrict host-side permissions (`chmod 700 data/`) and back
+      # it up with the same care you'd back up any other credential.
+      - ./data:/data
+
+  # ---------------------------------------------------------------------------
+  # The Flask dashboard is intentionally NOT shipped in the cron-job image.
+  # The dashboard backend uses cwd-relative imports (no __init__.py in
+  # dashboard/backend/) that make it awkward to launch from the package-only
+  # image this Dockerfile produces. Recommended v1 pattern: run the dashboard
+  # locally on your laptop with `uv run`, pointed at the same ./data directory
+  # (mount via sshfs/Tailscale if the data lives on a remote VPS).
+  #
+  # A future spec will cover dashboard deploy with a proper auth layer. See
+  # `docs/superpowers/specs/2026-06-28-deploy-your-own-design.md`
+  # → "Follow-up specs".
+  # ---------------------------------------------------------------------------
