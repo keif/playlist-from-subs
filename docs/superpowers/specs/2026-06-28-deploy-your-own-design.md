@@ -140,6 +140,12 @@ Note the explicit `docker run` (not `uses: docker://...`) so the workflow contro
 mkdir -p ./data
 cp /path/to/client_secrets.json ./data/
 cp /path/to/token.json ./data/
+# Optional but recommended: drop your config.json and .env into ./data/ too.
+# The app reads both from cwd, and the entrypoint forces cwd to /data, so
+# these settings (PLAYLIST_ID, filtering rules, etc.) take effect without
+# any further wiring. Otherwise the sync runs with built-in defaults.
+cp /path/to/config.json ./data/   # optional
+cp /path/to/.env ./data/          # optional
 # Container runs as UID 1000. On Linux hosts, give that UID write access to
 # ./data so the entrypoint can refresh token.json in place. (macOS hosts via
 # Docker Desktop / OrbStack translate UIDs and can skip this step.)
