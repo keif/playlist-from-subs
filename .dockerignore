@@ -20,9 +20,19 @@ package.json
 .idea/
 .DS_Store
 _notes/
+
+# Runtime artifacts — exclude both top-level and any nested copies (the package
+# itself writes to yt_sub_playlist/data/, yt_sub_playlist/reports/, etc. during
+# local dev, and those would otherwise be baked into the published image).
 reports/
 logs/
 data/
+**/data/
+**/reports/
+**/logs/
+**/processed_videos.json
+**/api_call_log.json
+**/playlist_cache/
 
 # Secrets that must never end up in a layer
 secrets/

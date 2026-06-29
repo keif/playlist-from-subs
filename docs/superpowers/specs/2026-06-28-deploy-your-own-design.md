@@ -43,7 +43,9 @@ YouTube Data API v3 quota is 10k units/day per *application*, not per user. A Sa
 
 **One image, one entrypoint.** `ENTRYPOINT ["python", "-m", "yt_sub_playlist"]` with the cron sync as the default `CMD`. The dashboard is launchable via `CMD ["python", "-m", "yt_sub_playlist.dashboard"]` for users who want it, but v1 documentation does not recommend exposing it publicly.
 
-**Entrypoint shim** unifies env-var-driven and file-mounted secrets handling. If `CLIENT_SECRETS_JSON` and `TOKEN_JSON` env vars are set, the shim writes them to `/data/*.json` before launching the CLI. If the files already exist (raw Docker bind mount), the shim leaves them alone. No code branching in the Python app.
+**Entrypoint shim** unifies env-var-driven and file-mounted secrets handling. If `CLIENT_SECRETS_B64` and `TOKEN_B64` env vars are set, the shim base64-decodes them to `/data/*.json` before launching the CLI. If the files already exist (raw Docker bind mount, or persisted Fly volume after first run), the shim leaves them alone. No code branching in the Python app.
+
+Both secrets are base64-encoded by contract. `token.json` despite its name is a binary credentials serialization (not JSON), so raw env vars would corrupt it on NUL bytes; `client_secrets.json` is genuine JSON and would survive raw transit, but encoding both keeps the contract consistent. A follow-up spec should migrate the project's token format to JSON (via `google.oauth2.credentials.Credentials.to_json()`); doing so would let users skip the base64 step but requires existing users to re-bootstrap their `token.json`. Out of scope for v1.
 
 ## Files added to the repo
 
@@ -69,8 +71,8 @@ The shared bootstrap produces two files: `client_secrets.json` (from GCP) and `t
 
 | Target | `client_secrets.json` | `token.json` | Refresh persistence |
 |---|---|---|---|
-| **Fly.io** | `fly secrets set CLIENT_SECRETS_JSON="$(cat client_secrets.json)"` | `fly secrets set TOKEN_JSON="$(cat token.json)"` | Volume mount at `/data`. Refreshed `token.json` is written back to disk, survives machine restarts. |
-| **GitHub Actions** | Repo secret `CLIENT_SECRETS_JSON` | Repo secret `TOKEN_JSON` | Workflow round-trips via `gh secret set TOKEN_JSON` using a `GH_PAT` (`repo` scope) stored as a third secret. **Without `GH_PAT`, the token works once and then expires permanently.** Documented as the path's primary footgun. |
+| **Fly.io** | `fly secrets set CLIENT_SECRETS_B64="$(base64 < client_secrets.json)"` | `fly secrets set TOKEN_B64="$(base64 < token.json)"` | Volume mount at `/data`. Refreshed `token.json` is written back to disk, survives machine restarts. |
+| **GitHub Actions** | Repo secret `CLIENT_SECRETS_B64` | Repo secret `TOKEN_B64` | Workflow round-trips via `gh secret set TOKEN_B64` using a `GH_PAT` (`repo` scope) stored as a third secret. **Without `GH_PAT`, the token works once and then expires permanently.** Documented as the path's primary footgun. |
 | **Raw Docker / VPS** | `./secrets/client_secrets.json` bind-mounted read-only | `./secrets/token.json` bind-mounted writable | Native filesystem. Refreshed token persists via the bind mount. |
 
 The GitHub Actions round-trip is the one piece of friction that doesn't have a clean alternative. Considered and rejected: committing the refreshed token back to a private repo file (worse than encrypted-at-rest secrets, even if the repo is private).
@@ -82,8 +84,8 @@ The GitHub Actions round-trip is the one piece of friction that doesn't have a c
 ```bash
 fly launch --copy-config --no-deploy        # uses fly.toml.example, creates the app only
 fly volume create data --size 1
-fly secrets set CLIENT_SECRETS_JSON="$(cat client_secrets.json)" \
-                TOKEN_JSON="$(cat token.json)"
+fly secrets set CLIENT_SECRETS_B64="$(base64 < client_secrets.json)" \
+                TOKEN_B64="$(base64 < token.json)"
 fly machine run --schedule daily \
    --volume data:/data \
    ghcr.io/keif/yt-sub-playlist:<version>
@@ -93,7 +95,7 @@ Fits the free tier. Note the absence of `fly deploy` — a scheduled machine is 
 
 ### Path 2: GitHub Actions cron
 
-User forks the repo, copies `cron-sync.example.yml` to `.github/workflows/cron-sync.yml`, sets three repo secrets (`CLIENT_SECRETS_JSON`, `TOKEN_JSON`, `GH_PAT`). Workflow runs on cron + `workflow_dispatch`, pulls the published image, runs the sync, round-trips the refreshed token back into repo secrets.
+User forks the repo, copies `cron-sync.example.yml` to `.github/workflows/cron-sync.yml`, sets three repo secrets (`CLIENT_SECRETS_B64`, `TOKEN_B64`, `GH_PAT`). Workflow runs on cron + `workflow_dispatch`, pulls the published image, runs the sync, round-trips the refreshed token back into repo secrets.
 
 ```yaml
 on:
@@ -105,11 +107,11 @@ jobs:
     steps:
       - uses: docker://ghcr.io/keif/yt-sub-playlist:<version>
         env:
-          CLIENT_SECRETS_JSON: ${{ secrets.CLIENT_SECRETS_JSON }}
-          TOKEN_JSON: ${{ secrets.TOKEN_JSON }}
+          CLIENT_SECRETS_B64: ${{ secrets.CLIENT_SECRETS_B64 }}
+          TOKEN_B64: ${{ secrets.TOKEN_B64 }}
       - name: Round-trip refreshed token
         env: { GH_TOKEN: ${{ secrets.GH_PAT }} }
-        run: gh secret set TOKEN_JSON --body "$(cat /tmp/token.json)" --repo "$GITHUB_REPOSITORY"
+        run: gh secret set TOKEN_B64 --body "$(cat /tmp/token.json)" --repo "$GITHUB_REPOSITORY"
 ```
 
 Free if the user is OK with running on Microsoft infra. Runbook is explicit about `GH_PAT`.
@@ -164,7 +166,7 @@ Each runbook ends with a verification block:
 
 Each chunk is sized to produce a working, testable deliverable. Roughly ordered by dependency.
 
-1. **`Dockerfile` + `.dockerignore` + entrypoint shim.** Image builds, runs, and writes env-var secrets to disk. Smoke test: `docker run -e CLIENT_SECRETS_JSON=... -e TOKEN_JSON=... <image> --help` prints CLI help.
+1. **`Dockerfile` + `.dockerignore` + entrypoint shim.** Image builds, runs, and writes env-var secrets to disk. Smoke test: `docker run -e CLIENT_SECRETS_B64=... -e TOKEN_B64=... <image> --help` prints CLI help.
 2. **`docker-compose.yml`.** Raw Docker path works end-to-end against a locally-built image. Verification: `docker compose run --rm sync --dry-run` succeeds.
 3. **`.github/workflows/docker-publish.yml`.** Image publishes to ghcr.io on `v*` tag. Verification: tag a test version, confirm the image appears at the expected URL.
 4. **`fly.toml.example` + `docs/deploy/fly.md`.** Fly path documented and tested by the maintainer at least once.
