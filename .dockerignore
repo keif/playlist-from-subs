@@ -1,0 +1,58 @@
+# Python build artifacts
+__pycache__/
+*.py[codz]
+*.so
+*.egg-info/
+.Python
+
+# Virtualenvs (uv creates one inside the container)
+.venv/
+venv/
+
+# Node tooling (we don't need it inside the container — release flow only)
+node_modules/
+pnpm-lock.yaml
+package.json
+.versionrc.json
+
+# Local workspace state
+.claude/
+.idea/
+.DS_Store
+_notes/
+reports/
+logs/
+data/
+
+# Secrets that must never end up in a layer
+secrets/
+client_secrets.json
+token.json
+.env
+.env.*
+*.env
+
+# Git + CI metadata (not needed at runtime)
+.git/
+.gitignore
+.github/
+
+# Documentation (not needed at runtime, except files referenced by pyproject.toml)
+docs/
+CHANGELOG.md
+# README.md and LICENSE are referenced by pyproject.toml's `readme` and
+# `license` fields, so hatchling needs them present during `uv sync` to build
+# the project's metadata. Don't exclude them.
+
+# Build artifacts
+bin/
+build/
+dist/
+
+# Spec / plan workspace
+docs/superpowers/
+
+# Templates (out-of-scope for v1, but excluded to keep image lean)
+templates/
+web/
+dashboard/
