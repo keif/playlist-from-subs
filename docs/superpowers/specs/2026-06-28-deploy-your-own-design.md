@@ -106,7 +106,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Prepare data dir
-        run: mkdir -p ${{ github.workspace }}/data
+        # The container runs as UID 1000 (non-root). The runner creates the
+        # workspace as a different user, so chmod before mounting.
+        run: |
+          mkdir -p ${{ github.workspace }}/data
+          sudo chown -R 1000:1000 ${{ github.workspace }}/data
       - name: Run sync
         run: |
           docker run --rm \
@@ -114,6 +118,10 @@ jobs:
             -e CLIENT_SECRETS_B64="${{ secrets.CLIENT_SECRETS_B64 }}" \
             -e TOKEN_B64="${{ secrets.TOKEN_B64 }}" \
             ghcr.io/keif/yt-sub-playlist:<version>
+      - name: Reclaim ownership for runner
+        # The container's UID 1000 wrote the refreshed token; the round-trip
+        # step runs as the runner user and needs to read it.
+        run: sudo chown -R $(id -u):$(id -g) ${{ github.workspace }}/data
       - name: Round-trip refreshed token
         env: { GH_TOKEN: ${{ secrets.GH_PAT }} }
         run: |
