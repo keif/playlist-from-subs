@@ -138,10 +138,17 @@ Note the explicit `docker run` (not `uses: docker://...`) so the workflow contro
 
 ```bash
 mkdir -p ./data
-chmod 700 ./data
 cp /path/to/client_secrets.json ./data/
 cp /path/to/token.json ./data/
-docker compose pull        # or `docker compose build` for build-from-source
+# Container runs as UID 1000. On Linux hosts, give that UID write access to
+# ./data so the entrypoint can refresh token.json in place. (macOS hosts via
+# Docker Desktop / OrbStack translate UIDs and can skip this step.)
+sudo chown -R 1000:1000 ./data
+chmod 700 ./data        # keep the credentials directory locked down
+docker compose build       # build the image locally
+# Later, once #13 publishes images to ghcr.io, replace `build: .` in
+# docker-compose.yml with `image: ghcr.io/keif/yt-sub-playlist:<version>`
+# and use `docker compose pull` instead.
 # Then trigger via host cron or systemd timer:
 docker compose run --rm sync
 ```
