@@ -15,8 +15,10 @@ pnpm-lock.yaml
 package.json
 .versionrc.json
 
-# Local workspace state
+# Local workspace state, including AI-tooling config that may be repo-local
 .claude/
+.agents/
+agents/
 .idea/
 .DS_Store
 _notes/
