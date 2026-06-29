@@ -73,7 +73,7 @@ The shared bootstrap produces two files: `client_secrets.json` (from GCP) and `t
 |---|---|---|---|
 | **Fly.io** | `fly secrets set CLIENT_SECRETS_B64="$(base64 < client_secrets.json)"` | `fly secrets set TOKEN_B64="$(base64 < token.json)"` | Volume mount at `/data`. Refreshed `token.json` is written back to disk, survives machine restarts. |
 | **GitHub Actions** | Repo secret `CLIENT_SECRETS_B64` | Repo secret `TOKEN_B64` | Workflow round-trips via `gh secret set TOKEN_B64` using a `GH_PAT` (`repo` scope) stored as a third secret. **Without `GH_PAT`, the token works once and then expires permanently.** Documented as the path's primary footgun. |
-| **Raw Docker / VPS** | `./secrets/client_secrets.json` bind-mounted read-only | `./secrets/token.json` bind-mounted writable | Native filesystem. Refreshed token persists via the bind mount. |
+| **Raw Docker / VPS** | `./data/client_secrets.json` (in the bind-mounted data dir) | `./data/token.json` (in the bind-mounted data dir) | Native filesystem. Refreshed token persists via the bind mount. |
 
 The GitHub Actions round-trip is the one piece of friction that doesn't have a clean alternative. Considered and rejected: committing the refreshed token back to a private repo file (worse than encrypted-at-rest secrets, even if the repo is private).
 
@@ -137,15 +137,16 @@ Note the explicit `docker run` (not `uses: docker://...`) so the workflow contro
 ### Path 3: Raw Docker / VPS
 
 ```bash
-mkdir -p ./secrets ./data
-cp /path/to/client_secrets.json ./secrets/
-cp /path/to/token.json ./secrets/
+mkdir -p ./data
+chmod 700 ./data
+cp /path/to/client_secrets.json ./data/
+cp /path/to/token.json ./data/
 docker compose pull        # or `docker compose build` for build-from-source
 # Then trigger via host cron or systemd timer:
 docker compose run --rm sync
 ```
 
-`docker-compose.yml` defines a `sync` service with `./secrets:/secrets:ro` and `./data:/data` mounts. Host cron / systemd handles scheduling.
+`docker-compose.yml` defines a one-shot `sync` service with a single `./data:/data` bind mount. Both `client_secrets.json` and `token.json` live in `./data/` alongside the app's runtime state (cache, API log). Host cron / systemd handles scheduling — there is no `restart` policy because the container exits after each sync.
 
 ## OAuth bootstrap
 
