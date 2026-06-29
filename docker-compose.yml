@@ -22,11 +22,18 @@ services:
     image: yt-sub-playlist:local
     container_name: yt-sub-playlist-sync
     volumes:
-      # ./data holds client_secrets.json + token.json + the app's runtime
-      # state (api_call_log.json, playlist_cache/, processed_videos.json).
+      # ./data holds:
+      #   - client_secrets.json + token.json (credentials)
+      #   - config.json (optional, project preferences — see README)
+      #   - .env (optional, e.g. PLAYLIST_ID and per-deploy overrides)
+      #   - api_call_log.json, playlist_cache/, processed_videos.json (runtime)
       # Treat this directory as sensitive: it contains a live OAuth refresh
       # token. Restrict host-side permissions (`chmod 700 data/`) and back
       # it up with the same care you'd back up any other credential.
+      #
+      # The app reads config.json and .env from cwd (the entrypoint forces
+      # cwd to /data), so this single bind mount carries every config source
+      # the app supports.
       - ./data:/data
 
   # ---------------------------------------------------------------------------
