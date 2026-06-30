@@ -1,0 +1,49 @@
+# cron-sync.example.yml — copy to .github/workflows/cron-sync.yml in your fork.
+#
+# Required repo secrets:
+#   CLIENT_SECRETS_B64  — base64 of client_secrets.json (no newlines)
+#   TOKEN_B64           — base64 of token.json (no newlines)
+#   GH_PAT              — Personal Access Token with `repo` scope (round-trip write)
+#
+# See docs/deploy/github-actions.md for full setup instructions.
+
+on:
+  schedule:
+    - cron: "0 6 * * *"   # daily at 06:00 UTC — adjust to taste
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prepare data dir
+        # The container runs as UID 1000 (non-root). The runner creates the
+        # workspace dir as root/runner, so chown before mounting to avoid
+        # permission errors inside the container.
+        run: |
+          mkdir -p ${{ github.workspace }}/data
+          sudo chown -R 1000:1000 ${{ github.workspace }}/data
+
+      - name: Run sync
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/data:/data \
+            -e CLIENT_SECRETS_B64="${{ secrets.CLIENT_SECRETS_B64 }}" \
+            -e TOKEN_B64="${{ secrets.TOKEN_B64 }}" \
+            ghcr.io/keif/yt-sub-playlist:<version>
+
+      - name: Reclaim ownership for runner
+        # The container's UID 1000 wrote the refreshed token.json. The round-trip
+        # step runs as the runner user and needs to read that file.
+        run: sudo chown -R $(id -u):$(id -g) ${{ github.workspace }}/data
+
+      - name: Round-trip refreshed token
+        # Re-encodes token.json as base64 before writing back to the secret.
+        # Without re-encoding, the next run's entrypoint shim fails at `base64 -d`
+        # on the raw binary content.
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          gh secret set TOKEN_B64 \
+            --body "$(base64 < ${{ github.workspace }}/data/token.json | tr -d '\n')" \
+            --repo "$GITHUB_REPOSITORY"
