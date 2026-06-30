@@ -51,7 +51,11 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+            # `latest` is published ONLY for release-tag pushes (v* refs that
+            # are not prereleases). A workflow_dispatch run produces a sha-
+            # short tag instead, so manually-triggered rebuilds off a feature
+            # branch can never overwrite the released `latest`.
+            type=raw,value=latest,enable=${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-') }}
             type=sha,format=short,enable=${{ github.event_name == 'workflow_dispatch' }}
 
       - name: Build and push
