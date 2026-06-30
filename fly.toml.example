@@ -20,8 +20,10 @@ primary_region = "iad"             # nearest Fly region; see `fly platform regio
   destination = "/data"
   # Volume holds client_secrets.json and token.json between runs.
   # Initial creation: `fly volume create data --size 1`
-  # After creation, run the one-time chown so UID 1000 can write:
-  #   fly ssh console -C "chown 1000:1000 /data"
+  # After creation, run the one-time chown so UID 1000 can write. Use a
+  # throwaway alpine machine — fly ssh console doesn't work yet because no
+  # scheduled machine exists:
+  #   fly machine run --rm --volume data:/data alpine sh -c 'chown -R 1000:1000 /data'
 
 [vm]
   size = "shared-cpu-1x"

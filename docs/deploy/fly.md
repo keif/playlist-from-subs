@@ -60,18 +60,15 @@ before the scheduled job ever runs:
 fly machine run \
   --rm \
   --volume data:/data \
-  --entrypoint sh \
-  ghcr.io/keif/yt-sub-playlist:<version> \
-  -c 'chown -R 1000:1000 /data'
+  alpine sh -c 'chown -R 1000:1000 /data'
 ```
 
-The `--rm` flag deletes the chown machine after it exits. The scheduled
-machine in step 5 then attaches the same volume with the corrected ownership.
-
-(Alternatively, after a machine exists — for example after re-running step 5
-following a failed attempt — you can `fly ssh console` into it and run
-`chown -R 1000:1000 /data` interactively. The throwaway-machine flow above
-is preferred because it works from a clean state with no first-run failure.)
+`alpine` is used here rather than the project image because the project image
+sets `USER app` (UID 1000) at build time — an override like `--entrypoint sh`
+on the project image would still execute as the non-root user, and the chown
+would fail. The `--rm` flag deletes the helper machine once the chown
+completes. The scheduled machine in step 5 then attaches the same volume with
+the corrected ownership.
 
 ### 4. Upload secrets
 
@@ -175,12 +172,16 @@ Re-auth is the same local bootstrap flow repeated:
 
 3. The next scheduled run (or a manual `fly machine run`) will use the fresh
    token. The entrypoint shim writes it to `/data/token.json` only if the file
-   does not exist, so you may need to remove the stale copy first:
+   does not exist, so you need to remove the stale copy first. The scheduled
+   machine is stopped (`--restart no`), so `fly ssh console` won't work —
+   spin up a throwaway machine the same way you did for the chown step:
 
    ```bash
-   fly ssh console
-   rm /data/token.json
-   exit
+   fly machine run \
+     --rm \
+     --volume data:/data \
+     alpine sh -c 'rm -f /data/token.json'
    ```
 
-   Then re-run step 2 or wait for the next scheduled machine start.
+   Then wait for the next scheduled run, or kick one off manually with
+   `fly machine run --rm --volume data:/data ghcr.io/keif/yt-sub-playlist:<version>`.
