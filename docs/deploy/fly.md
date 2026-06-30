@@ -50,18 +50,28 @@ state (cache, logs) between daily runs.
 ### 3. Fix volume ownership (one-time)
 
 Fly volumes are created owned by `root`. The container runs as UID 1000 and
-needs write access to `/data` to refresh `token.json` in place. Fix it once:
+the entrypoint shim runs as that non-root user — it cannot write the initial
+`client_secrets.json` / `token.json` to a root-owned volume, so the very first
+scheduled run would fail before it could authenticate. Chown the volume by
+running a throwaway one-shot machine that mounts it and fixes permissions
+before the scheduled job ever runs:
 
 ```bash
-fly ssh console
-chown 1000:1000 /data
-exit
+fly machine run \
+  --rm \
+  --volume data:/data \
+  --entrypoint sh \
+  ghcr.io/keif/yt-sub-playlist:<version> \
+  -c 'chown -R 1000:1000 /data'
 ```
 
-If `fly ssh console` errors because no machine is running yet, skip this step
-and come back after step 5 has run at least once — the entrypoint will write
-files as root the first time. Then do the chown so subsequent refreshes
-(written by UID 1000) succeed.
+The `--rm` flag deletes the chown machine after it exits. The scheduled
+machine in step 5 then attaches the same volume with the corrected ownership.
+
+(Alternatively, after a machine exists — for example after re-running step 5
+following a failed attempt — you can `fly ssh console` into it and run
+`chown -R 1000:1000 /data` interactively. The throwaway-machine flow above
+is preferred because it works from a clean state with no first-run failure.)
 
 ### 4. Upload secrets
 
@@ -83,9 +93,15 @@ the volume and the env-var copy is ignored.
 ```bash
 fly machine run \
   --schedule daily \
+  --restart no \
   --volume data:/data \
   ghcr.io/keif/yt-sub-playlist:<version>
 ```
+
+`--restart no` is important. Without it, Fly defaults to `on-failure` restart,
+which means an expired refresh token or a transient API error would put the
+machine into a tight retry loop (and possibly burn through your YouTube API
+quota) instead of staying stopped until the next daily schedule.
 
 Replace `<version>` with the image tag you want to pin (e.g. `v4.1.0`). See
 [releases](https://github.com/keif/yt-sub-playlist/releases) for available
