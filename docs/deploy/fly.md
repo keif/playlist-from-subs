@@ -1,0 +1,170 @@
+# Fly.io runbook
+
+Run `yt-sub-playlist` as a daily scheduled machine on Fly.io. The machine wakes
+once per day, syncs your playlist, and exits. Fits the Fly.io free tier.
+
+> **No `fly deploy`** — this deploy path uses `fly machine run --schedule`,
+> not `fly deploy`. Running `fly deploy` would create a separate always-on
+> machine that you would be billed for indefinitely. If you ran it by accident,
+> destroy the resulting machine with `fly machine destroy <id>` before
+> continuing.
+
+---
+
+## Prerequisites
+
+- A [Fly.io account](https://fly.io) with `flyctl` installed (`brew install flyctl` or see [fly.io/docs/flyctl/install](https://fly.io/docs/flyctl/install/))
+- `fly auth login` completed
+- `client_secrets.json` and `token.json` on your local machine
+
+  See [docs/deploy/oauth-bootstrap.md](./oauth-bootstrap.md) for the one-time
+  Google Cloud + OAuth setup that produces these two files.
+
+---
+
+## Steps
+
+### 1. Create the app
+
+Copy the example config and launch without deploying:
+
+```bash
+cp fly.toml.example fly.toml
+fly launch --copy-config --no-deploy
+```
+
+`fly launch` registers the app name and region from `fly.toml` but does not
+create any machines. Edit `fly.toml` first to set your preferred `app` name and
+`primary_region`.
+
+### 2. Create the persistent volume
+
+```bash
+fly volume create data --size 1
+```
+
+This creates a 1 GB volume named `data` in your app's primary region. The
+volume persists `client_secrets.json`, `token.json`, and the app's runtime
+state (cache, logs) between daily runs.
+
+### 3. Fix volume ownership (one-time)
+
+Fly volumes are created owned by `root`. The container runs as UID 1000 and
+needs write access to `/data` to refresh `token.json` in place. Fix it once:
+
+```bash
+fly ssh console
+chown 1000:1000 /data
+exit
+```
+
+If `fly ssh console` errors because no machine is running yet, skip this step
+and come back after step 5 has run at least once — the entrypoint will write
+files as root the first time. Then do the chown so subsequent refreshes
+(written by UID 1000) succeed.
+
+### 4. Upload secrets
+
+Base64-encode both credential files and push them as Fly secrets:
+
+```bash
+fly secrets set \
+  CLIENT_SECRETS_B64="$(base64 < client_secrets.json)" \
+  TOKEN_B64="$(base64 < token.json)"
+```
+
+The entrypoint shim decodes these to `/data/client_secrets.json` and
+`/data/token.json` on each machine start, but only if the files are not already
+present on the volume. After the first run the refreshed `token.json` lives on
+the volume and the env-var copy is ignored.
+
+### 5. Schedule the machine
+
+```bash
+fly machine run \
+  --schedule daily \
+  --volume data:/data \
+  ghcr.io/keif/yt-sub-playlist:<version>
+```
+
+Replace `<version>` with the image tag you want to pin (e.g. `v4.1.0`). See
+[releases](https://github.com/keif/yt-sub-playlist/releases) for available
+tags. Pinning to a specific version means you opt in to upgrades explicitly.
+
+> The image is published to `ghcr.io/keif/yt-sub-playlist` via issue #13. Until
+> that workflow is live, build and push the image manually or use a locally
+> pushed image reference.
+
+---
+
+## Verification
+
+**Confirm the scheduled machine registered:**
+
+```bash
+fly machine list
+```
+
+You should see one machine with state `stopped` and schedule `daily`.
+
+**Watch the first scheduled run:**
+
+```bash
+fly logs
+```
+
+A successful run ends with the playlist manager logging the number of videos
+added and then exiting 0. Look for a line like:
+
+```
+Sync complete. Added N videos to playlist.
+```
+
+**Confirm token persistence:**
+
+After the first run, inspect the volume to verify `token.json` was refreshed:
+
+```bash
+fly ssh console
+ls -la /data
+exit
+```
+
+A `token.json` modified after the run confirms the refresh round-trip worked.
+
+---
+
+## Re-authentication
+
+OAuth refresh tokens can expire after months of disuse or when your GCP
+project's OAuth policy changes. When the sync starts failing with `401
+Unauthorized` or `invalid_grant`, the refresh token has expired.
+
+Re-auth is the same local bootstrap flow repeated:
+
+1. On your laptop, re-run the OAuth flow:
+
+   ```bash
+   uv run python -m yt_sub_playlist.auth.oauth
+   ```
+
+   A browser window opens for you to re-authorize. This overwrites `token.json`
+   locally.
+
+2. Upload the new token:
+
+   ```bash
+   fly secrets set TOKEN_B64="$(base64 < token.json)"
+   ```
+
+3. The next scheduled run (or a manual `fly machine run`) will use the fresh
+   token. The entrypoint shim writes it to `/data/token.json` only if the file
+   does not exist, so you may need to remove the stale copy first:
+
+   ```bash
+   fly ssh console
+   rm /data/token.json
+   exit
+   ```
+
+   Then re-run step 2 or wait for the next scheduled machine start.
