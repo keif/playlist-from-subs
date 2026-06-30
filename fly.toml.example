@@ -1,0 +1,28 @@
+# fly.toml.example — app-level config for yt-sub-playlist on Fly.io.
+#
+# Copy to fly.toml before running `fly launch --copy-config --no-deploy`.
+# The schedule, image pin, and volume attachment live on the machine itself
+# (set via `fly machine run`), not here. Do NOT run `fly deploy` — that
+# creates a separate always-on machine you will be billed for.
+#
+# See docs/deploy/fly.md for the full runbook.
+
+app = "yt-sub-playlist-yourname"   # replace with your chosen app name
+primary_region = "iad"             # nearest Fly region; see `fly platform regions`
+
+[build]
+  # Image is pinned at deploy time via `fly machine run --image ...`.
+  # This stanza is here so Fly doesn't prompt you to set a builder during
+  # `fly launch`. Override with your preferred region or build approach.
+
+[[mounts]]
+  source = "data"
+  destination = "/data"
+  # Volume holds client_secrets.json and token.json between runs.
+  # Initial creation: `fly volume create data --size 1`
+  # After creation, run the one-time chown so UID 1000 can write:
+  #   fly ssh console -C "chown 1000:1000 /data"
+
+[vm]
+  size = "shared-cpu-1x"
+  memory = "256mb"
