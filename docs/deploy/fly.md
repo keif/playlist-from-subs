@@ -130,20 +130,24 @@ A successful run ends with the playlist manager logging the number of videos
 added and then exiting 0. Look for a line like:
 
 ```
-Sync complete. Added N videos to playlist.
+Processing complete: N/M videos added successfully
 ```
 
 **Confirm token persistence:**
 
-After the first run, inspect the volume to verify `token.json` was refreshed:
+After the first run, inspect the volume to verify `token.json` was refreshed.
+The scheduled machine is stopped (`--restart no`), so use a throwaway alpine
+machine to look at the volume:
 
 ```bash
-fly ssh console
-ls -la /data
-exit
+fly machine run \
+  --rm \
+  --volume data:/data \
+  alpine ls -la /data
 ```
 
-A `token.json` modified after the run confirms the refresh round-trip worked.
+A `token.json` with a mtime newer than when you uploaded it confirms the
+refresh round-trip worked.
 
 ---
 
