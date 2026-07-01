@@ -25,7 +25,7 @@ That process produces `client_secrets.json` and `token.json`. You will copy both
 
 ### Directory layout
 
-All credentials and runtime state live in `./data/`. The compose file mounts it as `./data:/data`. The container writes the refreshed `token.json` back to this directory on every run, so it must be writable by the container's UID.
+All credentials and runtime state live in `./data/`. The compose file mounts it as `./data:/data`. The container writes state files (playlist cache, API log) here on every run, and rewrites `token.json` whenever the OAuth library refreshes it, so this directory must be writable by the container's UID.
 
 ```
 /srv/yt-sub-playlist/
@@ -120,7 +120,7 @@ Once #13 ships, swap the compose file's `build: .` for an image pin and pull ins
    ```yaml
    services:
      sync:
-       image: ghcr.io/keif/playlist-from-subs:<version>
+       image: ghcr.io/keif/yt-sub-playlist:<version>
    ```
 2. Pull the published image:
    ```bash
