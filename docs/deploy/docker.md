@@ -270,13 +270,22 @@ Google refresh tokens can expire after roughly **6 months of disuse** or if the 
    ```
    See [docs/deploy/oauth-bootstrap.md](./oauth-bootstrap.md) for the full flow.
 
-2. Copy the new token to the server:
+2. Copy the new token to the server. `./data/` is chmod 700 owned by UID
+   1000 after the initial lockdown, so a plain `scp` as the deploy user
+   will fail on Linux hosts where the deploy user is not UID 1000. Use
+   one of these patterns:
+
    ```bash
+   # Option A: scp to a staging path, then move as root
+   scp /path/to/token.json user@your-server:/tmp/token.json
+   ssh user@your-server 'sudo install -m 600 -o 1000 -g 1000 /tmp/token.json /srv/yt-sub-playlist/data/token.json && rm /tmp/token.json'
+
+   # Option B: rsync with --rsync-path=sudo (requires passwordless sudo)
+   rsync -av --rsync-path='sudo rsync' /path/to/token.json user@your-server:/srv/yt-sub-playlist/data/
+   sudo chown 1000:1000 /srv/yt-sub-playlist/data/token.json   # over ssh
+
+   # macOS Docker Desktop / OrbStack hosts (no UID lockdown): plain scp works.
    scp /path/to/token.json user@your-server:/srv/yt-sub-playlist/data/
-   ```
-   Or using rsync:
-   ```bash
-   rsync -av /path/to/token.json user@your-server:/srv/yt-sub-playlist/data/
    ```
 
 3. If a sync container is currently running, stop it:
