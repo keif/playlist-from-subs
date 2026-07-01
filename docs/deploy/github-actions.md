@@ -45,10 +45,14 @@ To create the token:
 
 ### Copy the workflow template
 
+The template lives in `docs/deploy/` (not `.github/workflows/`) so it does
+not run as a real workflow in this repo — it only becomes active once you
+copy it into your fork:
+
 ```bash
 # In your fork's local clone:
 mkdir -p .github/workflows
-cp .github/workflows/cron-sync.example.yml .github/workflows/cron-sync.yml
+cp docs/deploy/cron-sync.example.yml .github/workflows/cron-sync.yml
 ```
 
 Open `cron-sync.yml` and replace `<version>` in the image reference with a real release tag:
