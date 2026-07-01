@@ -29,36 +29,36 @@ With your project selected:
 
 **APIs & Services → OAuth consent screen.**
 
-- **User type: External.** Choose this even for personal use. "Internal" requires a Google Workspace organization. External with Testing status is the right choice for self-hosted deployments.
+- **User type: External.** Choose this even for personal use. "Internal" requires a Google Workspace organization.
 - Fill in the required fields (app name, support email). The values don't matter — this screen is only shown to you.
 - **Scopes:** skip for now — the app requests scopes at runtime.
 - **Test users:** add your own Google account email. This is the account you'll authorize in step 5.
 
-**Publishing status: leave it as Testing.** Testing mode caps the app at 100
-authorized users and skips Google's OAuth verification process entirely — no
-review queue, no branding review, no wait.
+### Publishing status: choose Production (recommended) or Testing
 
-> ⚠️ **Testing-mode refresh tokens expire in 7 days.** For OAuth apps in
-> Testing status that request sensitive scopes (which `youtube` is), Google
-> caps refresh-token lifetime at 7 days regardless of activity. Your
-> `token.json` will start failing with `RefreshError` / 401 roughly a week
-> after each bootstrap. For personal deploy-your-own use this means you
-> need to re-run this bootstrap and re-upload `token.json` once a week.
->
-> Options if that's untenable:
-> 1. **Publish the app to Production status.** Refresh tokens then last
->    until revoked (typically ~6 months of inactivity). For unverified
->    apps requesting sensitive scopes, Google shows users a "This app isn't
->    verified" warning during consent — you can click through it since you
->    are the developer. Sensitive-scope verification (removing the warning)
->    is a Google review process not worth pursuing for personal use.
-> 2. **Automate the weekly re-auth.** Not covered by this project today;
->    would need a monitoring hook + a scripted re-auth flow.
->
-> Publishing to Production without verification is the pragmatic default
-> for one-user deploy-your-own. Do that via OAuth consent screen → **Publish
-> app**. The warning during your own consent is a one-time click. Google
-> may email periodically about verification; you can ignore it for personal use.
+Google issues **different refresh-token lifetimes** for the two modes when
+your app requests sensitive scopes (which the `youtube` scope is):
+
+- **Testing status:** refresh tokens **expire in 7 days**. You will need to
+  re-run this bootstrap and re-upload `token.json` every week. Fine if you
+  are experimenting; painful for actual daily-cron use.
+- **Production status (unverified):** refresh tokens last until revoked
+  (typically ~6 months of inactivity). Google shows a "This app isn't
+  verified" warning during consent — click "Advanced → Go to (app name)
+  (unsafe)" once, and it never appears again for that account. Sensitive-
+  scope verification (which removes the warning entirely) is a Google
+  review process not worth pursuing for personal use.
+
+**For deploy-your-own recommend: Production, unverified.** Do that by
+clicking **Publish app** on the OAuth consent screen. This is the same as
+what most personal automations that use Google APIs settle on. Google may
+occasionally email about verification — you can ignore it for personal use.
+
+Testing status is only the right choice if you plan to click through the
+weekly re-auth manually, or if you want to experiment with the flow before
+committing to Production status. You can switch modes at any time; existing
+tokens are not invalidated by the change but new tokens picked up after the
+switch inherit the new lifetime.
 
 ---
 
