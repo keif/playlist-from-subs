@@ -48,6 +48,17 @@ uv sync --extra dashboard     # CLI + Flask dashboard
 
 ---
 
+## Deploy your own
+
+Want the daily sync running on a server instead of your laptop? There are
+three deploy paths — Fly.io, GitHub Actions cron, and raw Docker on any VPS.
+Each user brings their own Google Cloud project and OAuth credentials; there
+is no hosted SaaS version.
+
+Start here: [**docs/DEPLOY.md**](./docs/DEPLOY.md).
+
+---
+
 ## Setup
 
 1. **Google Cloud OAuth credentials**
