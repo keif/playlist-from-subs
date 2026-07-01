@@ -281,8 +281,7 @@ Google refresh tokens can expire after roughly **6 months of disuse** or if the 
    ssh user@your-server 'sudo install -m 600 -o 1000 -g 1000 /tmp/token.json /srv/yt-sub-playlist/data/token.json && rm /tmp/token.json'
 
    # Option B: rsync with --rsync-path=sudo (requires passwordless sudo)
-   rsync -av --rsync-path='sudo rsync' /path/to/token.json user@your-server:/srv/yt-sub-playlist/data/
-   sudo chown 1000:1000 /srv/yt-sub-playlist/data/token.json   # over ssh
+   rsync -av --rsync-path='sudo rsync' --chown=1000:1000 /path/to/token.json user@your-server:/srv/yt-sub-playlist/data/
 
    # macOS Docker Desktop / OrbStack hosts (no UID lockdown): plain scp works.
    scp /path/to/token.json user@your-server:/srv/yt-sub-playlist/data/
