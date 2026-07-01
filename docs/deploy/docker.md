@@ -8,7 +8,7 @@ Self-host `yt-sub-playlist` on any Linux VPS (or local machine) with Docker inst
 
 - **Docker 24+** (ships Compose v2 as `docker compose`). Check: `docker compose version`.
 - `make` — optional shortcut layer; not required.
-- A checkout of this repo on the server (or at least `docker-compose.yml` and `Dockerfile`):
+- A **full checkout** of this repo on the server. The Dockerfile builds from the whole tree (`pyproject.toml`, `uv.lock`, `LICENSE`, `README.md`, `yt_sub_playlist/`), so grabbing just `docker-compose.yml` and `Dockerfile` will fail at build time. Once the published image ships (issue #13), you can skip this and pull instead — see [Build vs. pull](#build-vs-pull) below.
   ```bash
   git clone https://github.com/keif/yt-sub-playlist.git /srv/yt-sub-playlist
   cd /srv/yt-sub-playlist
@@ -31,34 +31,48 @@ All credentials and runtime state live in `./data/`. The compose file mounts it 
 /srv/yt-sub-playlist/
 ├── docker-compose.yml
 ├── Dockerfile
-└── data/                  ← bind-mounted at /data inside the container
-    ├── client_secrets.json
-    ├── token.json
-    ├── config.json        (optional)
-    ├── .env               (optional)
-    └── ...                (runtime: processed_videos.json, playlist_cache/, api_call_log.json)
+└── data/                             ← bind-mounted at /data inside the container
+    ├── client_secrets.json           (credentials, you provide)
+    ├── token.json                    (credentials, you provide; refreshed in place)
+    ├── config.json                   (optional)
+    ├── .env                          (optional)
+    └── yt_sub_playlist/data/         (runtime state — see note below)
+        ├── processed_videos.json
+        ├── playlist_cache/
+        └── api_call_log.json
 ```
 
-### Create and lock down the data directory
+> **Note about the buried runtime state.** The CLI's default `data_dir` is
+> `"yt_sub_playlist/data"` (a relative path baked in for local-dev use). The
+> container's entrypoint cd's to `/data`, so runtime state actually lands
+> under `./data/yt_sub_playlist/data/` on the host, not directly next to
+> `token.json`. Look there when backing up or inspecting the cache. A
+> follow-up issue will unify this via a `YT_SUB_PLAYLIST_DATA_DIR` env var
+> so the container can write state directly under `/data`.
+
+### Drop credentials into ./data/
+
+Copy credentials AS THE HOST USER first — otherwise the chown+chmod steps
+below lock the current user out of writing into `./data/`.
 
 ```bash
 mkdir -p ./data
 
+# From your laptop:
+scp /path/to/client_secrets.json user@your-server:/srv/yt-sub-playlist/data/
+scp /path/to/token.json          user@your-server:/srv/yt-sub-playlist/data/
+```
+
+### Lock down the data directory
+
+```bash
 # Linux hosts: the container runs as UID 1000. Give that UID write access.
 # macOS Docker Desktop / OrbStack: UID translation is handled automatically —
-# you can skip the chown step, but it won't hurt to run it.
+# skip these two commands on macOS.
 sudo chown -R 1000:1000 ./data
 
 # Restrict access — this directory holds a live OAuth refresh token.
-chmod 700 ./data
-```
-
-### Drop credentials into ./data/
-
-```bash
-# From your laptop (adjust paths):
-scp /path/to/client_secrets.json user@your-server:/srv/yt-sub-playlist/data/
-scp /path/to/token.json          user@your-server:/srv/yt-sub-playlist/data/
+sudo chmod 700 ./data
 ```
 
 ### Optional: app configuration
@@ -135,8 +149,12 @@ crontab -e
 Add a line (runs daily at 06:00):
 
 ```cron
-0 6 * * *  cd /srv/yt-sub-playlist && /usr/bin/docker compose run --rm sync >> /var/log/yt-sub-playlist.log 2>&1
+0 6 * * *  cd /srv/yt-sub-playlist && /usr/bin/docker compose run --rm sync >> ${HOME}/yt-sub-playlist.log 2>&1
 ```
+
+Log to a user-writable path (`${HOME}/yt-sub-playlist.log`) rather than
+`/var/log/`, which requires root. If you install the cron entry as root
+(via `sudo crontab -e`) then `/var/log/yt-sub-playlist.log` is fine.
 
 Use the full path to `docker` (`which docker`) if your cron environment doesn't include it.
 
@@ -213,22 +231,19 @@ If the mtime updates, the OAuth refresh cycle is working and the token will cont
 
 ## Dashboard
 
-The dashboard is **out of scope for v1** on raw Docker. It is intentionally commented out of `docker-compose.yml`.
+The dashboard is **out of scope for v1** on raw Docker. It is intentionally
+commented out of `docker-compose.yml`. The dashboard backend's data-source
+path is currently hard-coded to a local checkout — the same buried
+`yt_sub_playlist/data/` mentioned in the Directory layout note — and does
+not read a data-dir override env var, so simply mounting the server's
+`./data/` locally is not enough to point the dashboard at it.
 
-Recommended pattern for accessing server state locally:
+For now, treat "look at the server's state" as an admin-shell task:
+`ssh user@your-server 'ls -la /srv/yt-sub-playlist/data/yt_sub_playlist/data/'`.
 
-1. Mount the server's `./data/` directory to your laptop via **sshfs** or **Tailscale**:
-   ```bash
-   sshfs user@your-server:/srv/yt-sub-playlist/data /mnt/yt-data
-   ```
-2. Run the dashboard locally, pointed at the mounted directory:
-   ```bash
-   cd dashboard/backend
-   YT_SUB_PLAYLIST_DATA_DIR=/mnt/yt-data uv run python app.py
-   # Open http://localhost:5001
-   ```
-
-A future spec will cover dashboard deploy with a proper auth layer.
+A future spec will cover dashboard deploy (with a proper auth layer) and,
+alongside it, a data-dir env var that lets the dashboard point at a mounted
+or remote directory.
 
 ---
 
