@@ -133,21 +133,13 @@ added and then exiting 0. Look for a line like:
 Processing complete: N/M videos added successfully
 ```
 
-**Confirm token persistence:**
-
-After the first run, inspect the volume to verify `token.json` was refreshed.
-The scheduled machine is stopped (`--restart no`), so use a throwaway alpine
-machine to look at the volume:
-
-```bash
-fly machine run \
-  --rm \
-  --volume data:/data \
-  alpine ls -la /data
-```
-
-A `token.json` with a mtime newer than when you uploaded it confirms the
-refresh round-trip worked.
+That log line is the verification. Fly volumes stay attached to the scheduled
+machine even while it is stopped, so a separate throwaway `fly machine run
+--volume data:/data ...` cannot mount `data` to inspect it — attempting so
+fails with "volume already attached." If the sync log shows successful video
+adds AND no `RefreshError` / 401 warnings, the token refresh round-trip
+worked. Actual inspection of `/data` requires destroying and recreating the
+scheduled machine (see the re-auth section for that pattern).
 
 ---
 
@@ -174,18 +166,31 @@ Re-auth is the same local bootstrap flow repeated:
    fly secrets set TOKEN_B64="$(base64 < token.json)"
    ```
 
-3. The next scheduled run (or a manual `fly machine run`) will use the fresh
-   token. The entrypoint shim writes it to `/data/token.json` only if the file
-   does not exist, so you need to remove the stale copy first. The scheduled
-   machine is stopped (`--restart no`), so `fly ssh console` won't work —
-   spin up a throwaway machine the same way you did for the chown step:
+3. Remove the stale token from the volume and rebuild the scheduled machine.
+   The entrypoint shim writes the env-var token to `/data/token.json` only if
+   the file does not exist, so the old token has to go first. Fly attaches
+   the volume exclusively to the scheduled machine (even when stopped), so
+   you have to destroy that machine before a throwaway can mount the volume:
 
    ```bash
+   # Find the scheduled machine's ID:
+   fly machine list
+
+   # Destroy it. The volume detaches automatically.
+   fly machine destroy <machine-id>
+
+   # Use a throwaway alpine to remove the stale token file.
    fly machine run \
      --rm \
      --volume data:/data \
      alpine sh -c 'rm -f /data/token.json'
-   ```
 
-   Then wait for the next scheduled run, or kick one off manually with
-   `fly machine run --rm --volume data:/data ghcr.io/keif/yt-sub-playlist:<version>`.
+   # Recreate the scheduled machine (same command as step 5). The entrypoint
+   # will hydrate the new TOKEN_B64 secret into /data/token.json on next
+   # scheduled start.
+   fly machine run \
+     --schedule daily \
+     --restart no \
+     --volume data:/data \
+     ghcr.io/keif/yt-sub-playlist:<version>
+   ```
