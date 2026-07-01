@@ -141,6 +141,14 @@ docker compose run --rm sync --dry-run
 
 Expected: the sync logic runs, no videos are added to the playlist, no errors. If you see `ModuleNotFoundError` or a credentials failure, check that both JSON files landed in `./data/` with correct permissions.
 
+> **--dry-run is not fully no-mutation on first run.** If `PLAYLIST_ID` is
+> not set in `config.json` or `.env`, the CLI creates a new empty playlist
+> on YouTube before entering dry-run mode (that's the "or create" side of
+> `get_or_create_playlist`). Set `PLAYLIST_ID` in your `./data/.env`
+> before the first `--dry-run` if you want strictly no-mutation verification.
+> Follow-up code work will move this side effect behind the `--dry-run`
+> gate.
+
 ---
 
 ## Scheduling
@@ -237,7 +245,8 @@ only proves activity when it DOES advance — an updated mtime means a
 refresh happened and the round-trip works.
 
 ```bash
-ls -la ./data/token.json
+# Linux with the lockdown applied: sudo, because ./data is chmod 700 owned by 1000
+sudo ls -la ./data/token.json
 ```
 
 ---
