@@ -10,7 +10,7 @@ Self-host `yt-sub-playlist` on any Linux VPS (or local machine) with Docker inst
 - `make` — optional shortcut layer; not required.
 - A **full checkout** of this repo on the server. The Dockerfile builds from the whole tree (`pyproject.toml`, `uv.lock`, `LICENSE`, `README.md`, `yt_sub_playlist/`), so grabbing just `docker-compose.yml` and `Dockerfile` will fail at build time. Once the published image ships (issue #13), you can skip this and pull instead — see [Build vs. pull](#build-vs-pull) below.
   ```bash
-  git clone https://github.com/keif/yt-sub-playlist.git /srv/yt-sub-playlist
+  git clone https://github.com/keif/playlist-from-subs.git /srv/yt-sub-playlist
   cd /srv/yt-sub-playlist
   ```
 
@@ -77,7 +77,14 @@ sudo chmod 700 ./data
 
 ### Optional: app configuration
 
-The entrypoint forces the container's working directory to `/data`, so the app reads `config.json` and `.env` from that directory automatically. Drop them in if you want to override defaults (playlist name, duration filters, lookback window, etc.):
+The entrypoint forces the container's working directory to `/data`, so the
+app reads `config.json` and `.env` from that directory automatically. Drop
+them in if you want to override defaults (playlist name, duration filters,
+lookback window, etc.). **Do this BEFORE the "Lock down the data directory"
+step above** — otherwise the same `chown 1000:1000` + `chmod 700` will lock
+the host user out of writing into `./data/`. If you missed it, either
+`sudo cp` the files as root or temporarily chown back to your user, drop
+them in, then re-run the lockdown.
 
 ```bash
 scp /path/to/config.json user@your-server:/srv/yt-sub-playlist/data/   # optional
@@ -113,7 +120,7 @@ Once #13 ships, swap the compose file's `build: .` for an image pin and pull ins
    ```yaml
    services:
      sync:
-       image: ghcr.io/keif/yt-sub-playlist:<version>
+       image: ghcr.io/keif/playlist-from-subs:<version>
    ```
 2. Pull the published image:
    ```bash
@@ -211,21 +218,27 @@ sudo systemctl start yt-sub-playlist-sync.service
 
 ## Logs
 
-- **Host cron path:** logs land in whatever file you redirect to (the example above uses `/var/log/yt-sub-playlist.log`). Rotate with `logrotate` if needed.
+- **Host cron path:** logs land in whatever file you redirect to (the example above uses `${HOME}/yt-sub-playlist.log`, or `/var/log/yt-sub-playlist.log` for the root-cron variant). Rotate with `logrotate` if needed.
 - **systemd timer path:** logs go to the journal. Read them with:
   ```bash
   journalctl -u yt-sub-playlist-sync.service
   journalctl -u yt-sub-playlist-sync.service --since "1 hour ago"
   ```
 
-After a real run (not `--dry-run`), confirm the token was refreshed:
+After a real run (not `--dry-run`), the primary verification is the log
+output — look for `Processing complete: N/M videos added successfully`
+and no `RefreshError` / `401` warnings.
+
+Token file mtime is a WEAKER signal: the app only rewrites `token.json`
+when the credentials it loaded were expired or otherwise invalid. On a
+successful run with a still-valid access token the file is untouched, so
+an unchanged mtime does NOT mean the refresh cycle is broken. The mtime
+only proves activity when it DOES advance — an updated mtime means a
+refresh happened and the round-trip works.
 
 ```bash
-# The mtime should reflect the most recent run:
 ls -la ./data/token.json
 ```
-
-If the mtime updates, the OAuth refresh cycle is working and the token will continue to be renewed on each run.
 
 ---
 
