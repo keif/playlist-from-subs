@@ -36,19 +36,16 @@ All credentials and runtime state live in `./data/`. The compose file mounts it 
     ├── token.json                    (credentials, you provide; refreshed in place)
     ├── config.json                   (optional)
     ├── .env                          (optional)
-    └── yt_sub_playlist/data/         (runtime state — see note below)
-        ├── processed_videos.json
-        ├── playlist_cache/
-        └── api_call_log.json
+    ├── processed_videos.json          (runtime state)
+    ├── playlist_cache/                (runtime state)
+    └── api_call_log.json              (runtime state)
 ```
 
-> **Note about the buried runtime state.** The CLI's default `data_dir` is
-> `"yt_sub_playlist/data"` (a relative path baked in for local-dev use). The
-> container's entrypoint cd's to `/data`, so runtime state actually lands
-> under `./data/yt_sub_playlist/data/` on the host, not directly next to
-> `token.json`. Look there when backing up or inspecting the cache. A
-> follow-up issue will unify this via a `YT_SUB_PLAYLIST_DATA_DIR` env var
-> so the container can write state directly under `/data`.
+The container's entrypoint sets `YT_SUB_PLAYLIST_DATA_DIR=/data` so runtime
+state files sit at the root of the bind-mounted directory alongside your
+credentials. Local development that runs `python -m yt_sub_playlist` from a
+repo checkout still writes into `yt_sub_playlist/data/` by default (backwards
+compatible), so nothing changes for laptop use.
 
 ### Drop credentials into ./data/
 
@@ -253,17 +250,15 @@ sudo ls -la ./data/token.json
 
 The dashboard is **out of scope for v1** on raw Docker. It is intentionally
 commented out of `docker-compose.yml`. The dashboard backend's data-source
-path is currently hard-coded to a local checkout — the same buried
-`yt_sub_playlist/data/` mentioned in the Directory layout note — and does
-not read a data-dir override env var, so simply mounting the server's
-`./data/` locally is not enough to point the dashboard at it.
+path is currently hard-coded, so it does not yet honour the same
+`YT_SUB_PLAYLIST_DATA_DIR` env var the CLI uses (the CLI got that in
+issue #26; extending it to the dashboard is a future change).
 
 For now, treat "look at the server's state" as an admin-shell task:
-`ssh user@your-server 'ls -la /srv/yt-sub-playlist/data/yt_sub_playlist/data/'`.
+`ssh user@your-server 'ls -la /srv/yt-sub-playlist/data/'`.
 
-A future spec will cover dashboard deploy (with a proper auth layer) and,
-alongside it, a data-dir env var that lets the dashboard point at a mounted
-or remote directory.
+A future spec will cover dashboard deploy with a proper auth layer and
+teach the dashboard to point at a mounted or remote directory.
 
 ---
 
