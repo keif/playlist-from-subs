@@ -18,7 +18,11 @@ def load_api_call_log() -> dict:
     Returns:
         Dictionary of API call counts, or fallback hardcoded values if log missing.
     """
-    log_path = Path("yt_sub_playlist/data/api_call_log.json")
+    # Match the same YT_SUB_PLAYLIST_DATA_DIR resolution the CLI uses.
+    # Inlined rather than imported because this script uses sys.path
+    # gymnastics that don't play well with package imports.
+    data_dir = os.getenv("YT_SUB_PLAYLIST_DATA_DIR") or "yt_sub_playlist/data"
+    log_path = Path(data_dir) / "api_call_log.json"
     
     try:
         if log_path.exists():

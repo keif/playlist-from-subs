@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 from .config.env_loader import load_config, setup_logging
-from .core.playlist_manager import PlaylistManager
+from .core.playlist_manager import PlaylistManager, resolve_data_dir
 from .core.video_filtering import get_published_after_timestamp, parse_channel_whitelist
 from .core.youtube_client import dump_api_call_log
 
@@ -65,7 +65,7 @@ Examples:
 def _dump_api_call_log():
     """Dump API call log for quota analysis."""
     try:
-        log_path = Path("yt_sub_playlist/data/api_call_log.json")
+        log_path = Path(resolve_data_dir()) / "api_call_log.json"
         dump_api_call_log(log_path)
     except Exception as e:
         logger.debug(f"Failed to dump API call log: {e}")
