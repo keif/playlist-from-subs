@@ -7,9 +7,13 @@ it yourself.
 
 If you can put up with that, you get:
 
-- A daily YouTube subscription sync running on your own infrastructure.
+- A daily YouTube subscription sync running on infrastructure you chose (not
+  one operated by this project or shared with other users).
 - Your own 10k-units-per-day YouTube API quota (not shared with other users).
-- Full control over your OAuth credentials — nothing crosses a third-party server.
+- No trust handoff to a hosted service run by this project. Your OAuth
+  credentials go directly to whichever platform you pick — Fly's secret
+  store, GitHub Actions secrets, or a file on your own VPS — and never
+  through anything this project operates.
 
 This document is an index. Every deploy path shares the same OAuth setup, then
 diverges on where the daily cron actually runs.
