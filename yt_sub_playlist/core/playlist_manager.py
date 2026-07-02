@@ -143,29 +143,48 @@ class PlaylistManager:
 
         return detailed_results
 
+    DRY_RUN_PLAYLIST_ID = "(dry-run)"
+
     def get_or_create_playlist(
         self,
         playlist_id: str = None,
         playlist_name: str = None,
-        privacy_status: str = "unlisted"
+        privacy_status: str = "unlisted",
+        dry_run: bool = False,
     ) -> str:
         """
         Get existing playlist or create new one.
+
+        In dry-run mode, no playlist is ever created. If ``playlist_id`` is
+        supplied it is still verified read-only against the API (safe under
+        dry-run semantics). If ``playlist_id`` is not supplied, the method
+        logs what would be created and returns a sentinel string so the sync
+        pipeline can proceed to its own dry-run logging.
 
         Args:
             playlist_id: Existing playlist ID (if provided)
             playlist_name: Name for new playlist (if creating)
             privacy_status: Privacy setting for new playlist
+            dry_run: If True, never create a playlist even when playlist_id is None
 
         Returns:
-            Playlist ID
+            Playlist ID (or ``DRY_RUN_PLAYLIST_ID`` sentinel in dry-run + no id)
 
         Raises:
             SystemExit: If playlist operations fail
         """
+        resolved_name = playlist_name or "Auto Playlist from Subscriptions"
+
+        if dry_run and not playlist_id:
+            logger.info(
+                f"DRY RUN: Would create playlist '{resolved_name}' "
+                f"(privacy={privacy_status}). Set PLAYLIST_ID to skip this step."
+            )
+            return self.DRY_RUN_PLAYLIST_ID
+
         resolved_id = self.client.get_or_create_playlist(
             playlist_id=playlist_id,
-            playlist_name=playlist_name or "Auto Playlist from Subscriptions",
+            playlist_name=resolved_name,
             privacy_status=privacy_status
         )
 

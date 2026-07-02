@@ -141,13 +141,11 @@ docker compose run --rm sync --dry-run
 
 Expected: the sync logic runs, no videos are added to the playlist, no errors. If you see `ModuleNotFoundError` or a credentials failure, check that both JSON files landed in `./data/` with correct permissions.
 
-> **--dry-run is not fully no-mutation on first run.** If `PLAYLIST_ID` is
-> not set in `config.json` or `.env`, the CLI creates a new empty playlist
-> on YouTube before entering dry-run mode (that's the "or create" side of
-> `get_or_create_playlist`). Set `PLAYLIST_ID` in your `./data/.env`
-> before the first `--dry-run` if you want strictly no-mutation verification.
-> Follow-up code work will move this side effect behind the `--dry-run`
-> gate.
+> **--dry-run is strictly no-mutation.** With `PLAYLIST_ID` unset, dry-run
+> skips the playlist-create call entirely and logs what would have been
+> created. With `PLAYLIST_ID` set, dry-run verifies the playlist exists
+> (read-only) then reports what would be added. Either way, nothing on
+> your YouTube account changes.
 
 ---
 

@@ -102,11 +102,15 @@ def main():
             f"oldest entry {cache_stats['oldest_entry_days']} days"
         )
 
-        # Get or create target playlist
+        # Get or create target playlist. In dry-run mode with no PLAYLIST_ID
+        # set, this skips the API insert entirely — see PlaylistManager for
+        # sentinel handling. Closes the "--dry-run still creates a playlist"
+        # side effect (issue #25).
         playlist_id = manager.get_or_create_playlist(
             playlist_id=config["playlist_id"],
             playlist_name=config["playlist_name"],
             privacy_status=config["playlist_visibility"],
+            dry_run=args.dry_run,
         )
 
         # Fetch recent subscription videos and sync to playlist
