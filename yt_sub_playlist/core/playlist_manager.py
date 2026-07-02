@@ -21,6 +21,28 @@ from ..config.env_loader import VideoCache
 logger = logging.getLogger(__name__)
 
 
+# Local-dev default; the container entrypoint sets YT_SUB_PLAYLIST_DATA_DIR=/data
+# so state files land at the root of the mounted volume instead of a
+# nested yt_sub_playlist/data/ subdirectory. Kept as a module-level constant
+# so tests and downstream callers can reference it explicitly.
+DEFAULT_DATA_DIR = "yt_sub_playlist/data"
+
+
+def resolve_data_dir(explicit: str = None) -> str:
+    """
+    Resolve the data directory using the precedence:
+    explicit arg > YT_SUB_PLAYLIST_DATA_DIR env var > DEFAULT_DATA_DIR.
+
+    The env-var override exists so the container's entrypoint can point
+    the app at /data (see docker/entrypoint.sh and issue #26). Local
+    development that runs `python -m yt_sub_playlist` from the repo root
+    keeps the historical behaviour when the env var is not set.
+    """
+    if explicit:
+        return explicit
+    return os.getenv("YT_SUB_PLAYLIST_DATA_DIR") or DEFAULT_DATA_DIR
+
+
 class PlaylistManager:
     """
     High-level manager for YouTube playlist automation.
@@ -32,18 +54,22 @@ class PlaylistManager:
     4. Generate reports and analytics
     """
 
-    def __init__(self, config: Dict[str, Any], data_dir: str = "yt_sub_playlist/data"):
+    def __init__(self, config: Dict[str, Any], data_dir: str = None):
         """
         Initialize playlist manager.
 
         Args:
             config: Application configuration dictionary
-            data_dir: Directory for data storage and caching
+            data_dir: Directory for data storage and caching. When None
+                (the default), resolves via YT_SUB_PLAYLIST_DATA_DIR env
+                var or falls back to ``DEFAULT_DATA_DIR`` — see
+                ``resolve_data_dir``.
         """
+        resolved_data_dir = resolve_data_dir(data_dir)
         self.config = config
-        self.data_dir = data_dir
-        self.client = YouTubeClient(data_dir)
-        self.cache = VideoCache(data_dir=data_dir)
+        self.data_dir = resolved_data_dir
+        self.client = YouTubeClient(resolved_data_dir)
+        self.cache = VideoCache(data_dir=resolved_data_dir)
         self.filter = VideoFilter(config, self.cache)
 
     def sync_subscription_videos_to_playlist(

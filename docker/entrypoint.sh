@@ -44,4 +44,10 @@ write_secret TOKEN_B64 token.json
 # files regardless of how the container was invoked.
 cd "$DATA_DIR"
 
+# Point the app's runtime state (playlist_cache/, processed_videos.json,
+# api_call_log.json) at /data directly rather than the historical
+# yt_sub_playlist/data/ subdirectory that resolves under cwd for local dev.
+# See yt_sub_playlist/core/playlist_manager.py::resolve_data_dir and issue #26.
+export YT_SUB_PLAYLIST_DATA_DIR="$DATA_DIR"
+
 exec "$@"
